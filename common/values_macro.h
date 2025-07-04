@@ -1,0 +1,20 @@
+#ifndef VALUES_MACRO
+#define VALUES_MACRO
+
+#define VALUES_VALUE_TEST_H 0b00100000
+#define VALUES_VALUE_TEST_L 0b00000011
+
+// Stimulation enable
+#define STIM_ENABLE_A_VALUE_H 0xAA
+#define STIM_ENABLE_A_VALUE_L 0xAA
+
+#define STIM_DISABLE_VALUE_H 0x00
+#define STIM_DISABLE_VALUE_L 0x00
+
+#define STIM_ENABLE_B_VALUE_H 0x00
+#define STIM_ENABLE_B_VALUE_L 0xFF
+
+
+
+#endif
+
