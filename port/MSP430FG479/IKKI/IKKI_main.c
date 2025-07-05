@@ -36,6 +36,29 @@
 //                |                 |
 
 
+/*
+State machine for SD16: working with interruptions
+1. Send Channel ID being sampled
+2. Sample
+3. Send sample (x2)
+
+State changes:
+1 - 2 : interruption SD16 ON
+        interruption UART OFF
+2 - 3 : interruption SD16 OFF
+        interruption UART ON
+3 - 1 : interruption SD16 OFF
+        interruption UART ON
+
+*/
+
+/*
+State machine for INTAN configuration: working with polling
+1. Update register and value to be sent
+2. Send register and value
+*/
+
+
 #include "msp430fg479.h"
 #include <msp430.h>
 
@@ -50,8 +73,9 @@
 #include "../config/UART_config.h"
 #include "../config/clk_config.h"
 
-#include "../../../common/values_macro.h"
-#include "../../../common/register_macro.h"
+
+
+#include "../../../common/INTAN_config.h"
 
 
 int state = 1;
@@ -63,13 +87,18 @@ uint8_t packet_1 = 1;
 uint8_t packet_2 = 2;
 uint8_t packet_3 = 3;
 uint8_t packet_4 = 4;
+uint16_t pckt_count = 0;
+
+
 #define UART_USAGE  false //True: UART, False: SPI
 #define SD16_USAGE false
+#define SENSE_OR_STIM 2 //1:SENSE 2:STIM 
 
 CLK_config_struct CLK_config;
 SD16A_config_struct SD16A_configuration;
 UART_config_struct UART_config;
 SPI_config_struct SPI_config;
+INTAN_config_struct INTAN_config;
 
 
 
@@ -97,128 +126,35 @@ int main(void) {
 
 #endif
 
-#if (SD16_USAGE)
-  //************************** SD16 configuration *****************************
-  setup_SD16A(SD16A_configuration);
-  enable_interruption_SD16A(true);
-  start_conversion(); // While it is started, working in continuous mode will
-                      // sample the channel A until it is stopped
-#endif
-  UCA0TXBUF = 0x45; // Transmit first character
 
-  enable_interruptions(true);
-
-  IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-  
-}
-
-/*
-State machine for SD16:
-1. Send Channel ID being sampled
-2. Sample
-3. Send sample (x2)
-
-State changes:
-1 - 2 : interruption SD16 ON
-        interruption UART OFF
-2 - 3 : interruption SD16 OFF
-        interruption UART ON
-3 - 1 : interruption SD16 OFF
-        interruption UART ON
-
-*/
-
-/*
-State machine for INTAN configuration:
-1. Update register and value to be sent
-2. Send register and value
-*/
-
-
-//***************************************************************************** 
-//Interrupción de la UART
-//***************************************************************************** 
-#if (UART_USAGE == true)
-    //TX interrupt handler
-
-    #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-    #pragma vector=USCIAB0TX_VECTOR
-    __interrupt void USCI_A0_Tx (void)
-    #elif defined(__GNUC__)
-    void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI_A0_Tx (void)
-    #else
-    #error Compiler not supported!
-    #endif
-    {
-        if (state == 1){
-            UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
-            state = 2;
-            SD16CCTL0 |= SD16IE;          // Enabling SD16 interrupt    
-            IE2 &= ~(UCA0RXIE|UCA0TXIE);  // Disabling UART interrupt
-
-        }
-        if (state == 3) {
-            if (high_or_low) {
-                UCA0TXBUF = high_word;    // Envía el byte alto
-            } else {
-                UCA0TXBUF = low_word;     // Envía el byte bajo
-                state = 1;                // Solo aquí finalizamos la transmisión completa de los bytes
-                SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
-                IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-
-            }
-            high_or_low = !high_or_low;   // Alterna entre alto y bajo
-
-        }else{
-            
-        }
-
-    }
-
-#else
-
-//*****************************************************************************
-// Interrupción del SPI
-//*****************************************************************************
-
-#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector = USCIAB0RX_VECTOR
-__interrupt void USCIA0RX_ISR(void)
-#elif defined(__GNUC__)
-void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
-#else
-#error Compiler not supported!
-#endif
-{
+#if (SENSE_OR_STIM==1)
   #if (SD16_USAGE)
-    if (state == 1) {
-      UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
-      state = 2;
-      SD16CCTL0 |= SD16IE;         // Enabling SD16 interrupt
-      IE2 &= ~(UCA0RXIE);          // Disabling SPI interrupt
-    }
-    if (state == 3) {
-      if (high_or_low) {
-        UCA0TXBUF = high_word;      // Envía el byte alto
-        high_or_low = !high_or_low; // Alterna entre alto y bajo
+    //************************** SD16 configuration *****************************
+    setup_SD16A(SD16A_configuration);
+    enable_interruption_SD16A(true);
+    start_conversion(); // While it is started, working in continuous mode will
+                        // sample the channel A until it is stopped
+  #endif
+    UCA0TXBUF = 0x45; // Transmit first character
 
-      } else {
-        UCA0TXBUF = low_word;       // Envía el byte bajo
-        state = 1;                  // Solo aquí finalizamos la transmisión completa de los bytes
-        SD16CCTL0 &= ~(SD16IE);     // Disabling SD16 interrupt
-        IE2 |= UCA0RXIE;            // Enabling SPI interrupt
-        high_or_low = !high_or_low; // Alterna entre alto y bajo
-      }
-    }
+    enable_interruptions(true);
 
-
-  #else
+    IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
+#elif(SENSE_OR_STIM == 2)
+pckt_count = 0;
+INTAN_config.step_sel = 1000;
+INTAN_config.max_size = 4;
+INTAN_config.target_voltage = 1.2;
+create_arrays(&INTAN_config);
+while(1){
     if (state == 1){
-      packet_1 = 0b10100000;
-      packet_2 = REGISTER_VALUE_TEST;
-      packet_3 = VALUES_VALUE_TEST_H;
-      packet_4 = VALUES_VALUE_TEST_L;
-      state = 2;
+
+      update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
+      pckt_count++;
+      if(pckt_count == INTAN_config.max_size){
+        pckt_count = 0;
+      }
+      state = 2;      
     }
     else if (state == 2){
       state = 1;
@@ -230,20 +166,107 @@ void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
       UCA0TXBUF = packet_3;
       while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
       UCA0TXBUF = packet_4;
+
+    }
+}
+#endif
+}
+
+
+
+
+
+
+
+
+#if (SENSE_OR_STIM == 1)
+
+  //***************************************************************************** 
+  //Interrupción de la UART
+  //***************************************************************************** 
+  #if (UART_USAGE == true)
+      //TX interrupt handler
+
+      #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+      #pragma vector=USCIAB0TX_VECTOR
+      __interrupt void USCI_A0_Tx (void)
+      #elif defined(__GNUC__)
+      void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI_A0_Tx (void)
+      #else
+      #error Compiler not supported!
+      #endif
+      {
+          if (state == 1){
+              UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
+              state = 2;
+              SD16CCTL0 |= SD16IE;          // Enabling SD16 interrupt    
+              IE2 &= ~(UCA0RXIE|UCA0TXIE);  // Disabling UART interrupt
+
+          }
+          if (state == 3) {
+              if (high_or_low) {
+                  UCA0TXBUF = high_word;    // Envía el byte alto
+              } else {
+                  UCA0TXBUF = low_word;     // Envía el byte bajo
+                  state = 1;                // Solo aquí finalizamos la transmisión completa de los bytes
+                  SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
+                  IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
+
+              }
+              high_or_low = !high_or_low;   // Alterna entre alto y bajo
+
+          }else{
+              
+          }
+
+      }
+
+  #else
+      
+    //*****************************************************************************
+    // Interrupción del SPI
+    //*****************************************************************************
+
+    #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+    #pragma vector = USCIAB0RX_VECTOR
+    __interrupt void USCIA0RX_ISR(void)
+    #elif defined(__GNUC__)
+    void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
+    #else
+    #error Compiler not supported!
+    #endif
+    {
+      if (state == 1) {
+        UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
+        state = 2;
+        SD16CCTL0 |= SD16IE;         // Enabling SD16 interrupt
+        IE2 &= ~(UCA0RXIE);          // Disabling SPI interrupt
+      }
+      if (state == 3) {
+        if (high_or_low) {
+          UCA0TXBUF = high_word;      // Envía el byte alto
+          high_or_low = !high_or_low; // Alterna entre alto y bajo
+
+        } else {
+          UCA0TXBUF = low_word;       // Envía el byte bajo
+          state = 1;                  // Solo aquí finalizamos la transmisión completa de los bytes
+          SD16CCTL0 &= ~(SD16IE);     // Disabling SD16 interrupt
+          IE2 |= UCA0RXIE;            // Enabling SPI interrupt
+          high_or_low = !high_or_low; // Alterna entre alto y bajo
+        }
+      }
+
     }
   #endif
-  }
-#endif
 
 
 
 
-//*****************************************************************************
-// Interrupción del SD16_A
-//*****************************************************************************
+  //*****************************************************************************
+  // Interrupción del SD16_A
+  //*****************************************************************************
 
 
-#if (SD16_USAGE)
   #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
   #pragma vector = SD16A_VECTOR
   __interrupt void SD16ISR(void)

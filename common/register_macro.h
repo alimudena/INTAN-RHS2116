@@ -1,6 +1,9 @@
 #ifndef REGISTER_MACRO
 #define REGISTER_MACRO
 
+
+#define WRITE_ACTION 0b10100000
+
 #define REGISTER_VALUE_TEST 0b01110000
 
 // Stimulation enable
@@ -23,22 +26,22 @@
 #define DC_AMPLIFIER_POWER 0x26 //38
 
 //  Compliance Monitor (READ ONLY REGISTER WITH CLEAR) 
-#define CIMPLIANCE_MONITOR 0x28 //40
+#define COMPLIANCE_MONITOR 0x28 //40
 
 // Stimulator On (TRIGGERED REGISTER) 
-#define STIMULATOR_ON 0x2A //42
+#define STIM_ON 0x2A //42
 
 //Stimulator Polarity (TRIGGERED REGISTER) 
-#define STIMULATOR_ON 0x2C //44
+#define STIM_POLARITY 0x2C //44
 
 //Charge Recovery Switch (TRIGGERED REGISTER)
-#define STIMULATOR_ON 0x2E //46
+#define CHRG_RECOV_SWITCH 0x2E //46
 
 // Current-Limited Charge Recovery Enable (TRIGGERED REGISTER)
-#define STIMULATOR_ON 0x30 //48
+#define CURR_LIM_CHRG_RECOV_EN 0x30 //48
 
 // Fault Current Detector (READ ONLY REGISTER) 
-#define STIMULATOR_ON 0x32 //50
+#define FAULT_CURR_DET 0x32 //50
 
 //Registers 64-79: Negative Stimulation Current Magnitude (TRIGGERED REGISTERS)
 
