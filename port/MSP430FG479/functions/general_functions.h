@@ -12,8 +12,9 @@ void OFF_pin();
 void ON_pin();
 
 
-//Timer A
-void timer_A();
-
+//CS for INTAN
+void CS_setup();
+void ON_CS_pin();
+void OFF_CS_pin();
 // end
 

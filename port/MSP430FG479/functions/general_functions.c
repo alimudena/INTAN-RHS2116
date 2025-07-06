@@ -35,18 +35,22 @@ void OFF_pin(){
 void ON_pin(){                               // On 
     P4OUT |= 0x40;
 }
+
+
+
 //*****************************************************************************
-/*TIMER BASIC USAGE*/
+/*CS for INTAN*/
 //*****************************************************************************
-/*
-void timer_A(uint16_t timer_A_count){
-    CCTL0 |= CCIE;                             // CCR0 interrupt enabled
-    CCR0 = timer_A_count;                             // Quantity counted by Timer_A before interrupting
-    TACTL |= TASSEL_2 | MC_2;                  // SMCLK, continuous mode
+
+void CS_setup(){
+    P4DIR |= BIT4;                            // Set P4.4 to output direction
 }
 
-*/
+void ON_CS_pin(){                               // On 
+    P4OUT |= 0x10;
+}
 
-
-
+void OFF_CS_pin(){
+    P4OUT &= ~0x10;                          // Off   
+}
 

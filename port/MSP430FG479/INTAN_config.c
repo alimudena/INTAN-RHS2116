@@ -105,7 +105,7 @@ uint16_t chrg_recov_curr_lim_united(uint16_t curr_lim_sel) {
     unsigned int i;
     for (i = (sizeof(chrg_recov_curr_lim_table) / sizeof(chrg_recov_curr_lim_table[0])) - 1; i < sizeof(chrg_recov_curr_lim_table) / sizeof(chrg_recov_curr_lim_table[0]); --i) {
         if (chrg_recov_curr_lim_table[i].current_nA == curr_lim_sel) {
-            StepConfig cfg = chrg_recov_curr_lim_table[i];
+            chrg_recov_curr_lim_config cfg = chrg_recov_curr_lim_table[i];
             uint16_t result = 0;
             result |= (cfg.sel3 & 0x03) << 13;
             result |= (cfg.sel2 & 0x3F) << 7;
@@ -142,11 +142,11 @@ uint8_t calculate_current_lim_chr_recov(float target_voltage){
 }
 
 uint8_t calculate_stim_current(INTAN_config_struct* INTAN_config, uint16_t I_target_nA){
-    uint8_t magnitude = (uint8_t)(I_neg_target_nA / INTAN_config->step_sel);
+    uint8_t magnitude = (uint8_t)(I_target_nA / INTAN_config->step_sel);
     return magnitude;
 }
 
-void create_arrays(INTAN_config_struct* INTAN_config){
+void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
     uint8_t step_H;
     uint8_t step_L;
     split_uint16(step_sel_united(INTAN_config->step_sel), &step_H, &step_L);
@@ -159,7 +159,7 @@ void create_arrays(INTAN_config_struct* INTAN_config){
 
     uint8_t CL_H;
     uint8_t CL_L;
-    split_uint16(CL_sel_united(INTAN_config->CL_sel), &CL_H, &CL_L);
+    split_uint16(chrg_recov_curr_lim_united(INTAN_config->CL_sel), &CL_H, &CL_L);
 
 
 
@@ -170,6 +170,20 @@ void create_arrays(INTAN_config_struct* INTAN_config){
     INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
     INTAN_config->array3[reg_config_num] = VALUES_VALUE_TEST_H;
     INTAN_config->array4[reg_config_num] = VALUES_VALUE_TEST_L;
+    reg_config_num++;
+    
+    //REGISTER 32: Enable - disable stimulation
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    reg_config_num++;
+
+    //REGISTER 33: Enable - disable stimulation
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
     reg_config_num++;
 
     //REGISTER 34: Stimulation Current Step Size
@@ -289,7 +303,7 @@ void create_arrays(INTAN_config_struct* INTAN_config){
     // si queremos utilizar un valor diferente habría que actualizarlo antes de utilizarlo
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
     INTAN_config->array2[reg_config_num] = CH0_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = trim;
+    INTAN_config->array3[reg_config_num] = trim_neg;
     INTAN_config->array4[reg_config_num] = negative_current;
     reg_config_num++;
 
@@ -311,6 +325,151 @@ void create_arrays(INTAN_config_struct* INTAN_config){
     reg_config_num++;
 
 }
+
+
+void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
+    uint8_t step_H;
+    uint8_t step_L;
+    split_uint16(step_sel_united(INTAN_config->step_sel), &step_H, &step_L);
+
+    uint8_t BiasVol; 
+    BiasVol = vias_voltages_sel(INTAN_config->step_sel);
+
+    uint8_t dac_value;
+    dac_value = calculate_current_lim_chr_recov(INTAN_config->target_voltage);
+
+    uint8_t CL_H;
+    uint8_t CL_L;
+    split_uint16(chrg_recov_curr_lim_united(INTAN_config->CL_sel), &CL_H, &CL_L);
+
+    uint8_t CH_ON_selected_L = CH_2_ON_L+CH_7_ON_L;
+    uint8_t CH_ON_selected_H = CH_12_ON_H;
+
+    uint16_t reg_config_num = 0;
+    
+    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    reg_config_num++;
+
+    //2.  Asegurar que la estimulación está deshabilitada
+    //REGISTER 32: Enable - disable stimulation
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    reg_config_num++;
+
+    //REGISTER 33: Enable - disable stimulation
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    reg_config_num++;
+
+    //3.  Encender todos los amplificadores de baja ganancia con acoplamiento DC para evitar un consumo excesivo de energía a casua de un error de HW
+    // Si está a cero, se consumen 30.9mA adicionales de VDD
+    //REGISTER 38: Individual DC Amplifier Power
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = DC_AMPLIFIER_POWER;
+    INTAN_config->array3[reg_config_num] = ONES_8;
+    INTAN_config->array4[reg_config_num] = ONES_8;
+    reg_config_num++;
+
+    // hay un monton de pasos entre medias relacionados con la parte de los ADC que vamos a ignorar... de momento
+    
+    //4.  Configurar el tamaño de paso de estimulacion (34)
+    //REGISTER 34: Stimulation Current Step Size
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_STEP_SIZE;
+    INTAN_config->array3[reg_config_num] = step_H;
+    INTAN_config->array4[reg_config_num] = step_L;
+    reg_config_num++;
+
+    //5.  Establecer voltajes de polarizacion de estimulacion para el paso establecido en el registro 34 (35)
+    //REGISTER 35: Stimulation Bias Voltages
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_BIAS_VOLTAGE;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = BiasVol;
+    reg_config_num++;
+    
+    //6.  Establecer el voltaje objetivo de recuperacion de carga limitada en corriente (36)
+    //REGISTER 36: Current-Limited Charge Recovery Target Voltage
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = dac_value;
+    reg_config_num++;    
+    
+    //7.  Establecer el límite de corriente de recuperación de carga (37)
+    //REGISTER 37: Charge Recovery Current Limit
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = CHARGE_RECOVERY_CURRENT_LIMIT;
+    INTAN_config->array3[reg_config_num] = CL_H;
+    INTAN_config->array4[reg_config_num] = CL_L;
+    reg_config_num++;
+
+    //8.  Apagar todos los estimuladores (con U activa) (42)
+    //REGISTER 42: Stimulator On-Off (TRIGGERED REGISTER) - stimulation OFF
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = STIM_ON;
+    INTAN_config->array3[reg_config_num] = ALL_CH_OFF;
+    INTAN_config->array4[reg_config_num] = ALL_CH_OFF;
+    reg_config_num++;
+
+    //9.  Establece todos los estimuladores en polaridad negativa (44)
+    //REGITER 44: Stimulator Polarity (TRIGGERED REGISTER) - stimulation positive in 3 different registers
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = STIM_POLARITY;
+    INTAN_config->array3[reg_config_num] = CH_ON_selected_L;
+    INTAN_config->array4[reg_config_num] = CH_ON_selected_H;
+    reg_config_num++;
+
+    //10. Abre todos los interruptores de recuperación de carga (46)
+    //REGISTER 46: Charge Recovery Switch (TRIGGERED REGISTER) - activated in 3 different registers
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CHRG_RECOV_SWITCH;
+    INTAN_config->array3[reg_config_num] = CH_ON_selected_L;
+    INTAN_config->array4[reg_config_num] = CH_ON_selected_H;
+    reg_config_num++;
+
+    //11. Abre todos los interruptores de recuperación de carga limitada en corriente (48)
+    //REGISTER 48: Current-Limited Charge Recovery Enable (TRIGGERED REGISTER) - activated in 3 different registers
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CURR_LIM_CHRG_RECOV_EN;
+    INTAN_config->array3[reg_config_num] = CH_ON_selected_L;
+    INTAN_config->array4[reg_config_num] = CH_ON_selected_H;
+    reg_config_num++;
+
+    //12. Establece las corrientes negativas de estimulacion en cero centrando los ajustes de corriente (64...)
+    //13. Establece las corrientes positivas de estimulacion en cero centrando los ajustes de corriente (96...)
+    //14. Habilitar la estimulacion de los estimuladores (32, 33)
+    //REGISTER 32: Enable - disable stimulation
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A;
+    INTAN_config->array3[reg_config_num] = STIM_ENABLE_A_VALUE_H;
+    INTAN_config->array4[reg_config_num] = STIM_ENABLE_A_VALUE_L;
+    reg_config_num++;
+
+    //REGISTER 33: Enable - disable stimulation
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B;
+    INTAN_config->array3[reg_config_num] = STIM_ENABLE_B_VALUE_H;
+    INTAN_config->array4[reg_config_num] = STIM_ENABLE_B_VALUE_L;
+    reg_config_num++;
+
+    //15. Comando ficticio con flag M activado para limpiar el monitor de conformidad (255 - register value test)
+    INTAN_config->array1[reg_config_num] = READ_ACTION_M;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    reg_config_num++;
+
+}
+
 
 void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4, INTAN_config_struct INTAN_config) {
     

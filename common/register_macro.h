@@ -10,7 +10,7 @@
 #define READ_ACTION_M                   0b11010000
 #define READ_ACTION_U                   0b11100000
 
-#define REGISTER_VALUE_TEST             0b01110000
+#define REGISTER_VALUE_TEST             255
 
 // Stimulation enable
 #define STIM_ENABLE_A                   0x20 //32

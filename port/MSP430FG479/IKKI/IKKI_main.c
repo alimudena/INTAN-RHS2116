@@ -4,6 +4,9 @@
 //              | |                 |  32kHz xtal
 //              --|RST          XOUT|-
 //                |                 |
+//          LED <-|P4.6   12        |
+// CS for INTAN <-|P4.4   14        |
+//                |                 |
 //                |  ---  CLK  ---  |
 //                |             P1.1|--> MCLK = 8Mhz  --> 57 (referencia DCO)
 //                |             P1.4|--> SMCLK = 8MHz --> 54 (referencia DCO)
@@ -15,7 +18,7 @@
 //                |                 |
 //                |  ---  SPI  ---  |
 //                |             P2.4|-> Data Out (UCA0SIMO) --> 76
-//          LED <-|P4.6         P2.5|<- Data In (UCA0SOMI) --> 75
+//                |             P2.5|<- Data In (UCA0SOMI) --> 75
 //                |             P3.0|-> Serial Clock Out (UCA0CLK) --> 41
 //                |                 |
 //                |  ---  SD16 ---  |
@@ -141,36 +144,42 @@ int main(void) {
 
     IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
 #elif(SENSE_OR_STIM == 2)
-pckt_count = 0;
-INTAN_config.step_sel = 1000;
-INTAN_config.max_size = 8;
-INTAN_config.target_voltage = 1.2;
-INTAN_config.CL_sel = 1;
+  CS_setup();
+  ON_CS_pin();
 
-create_arrays(&INTAN_config);
-while(1){
-    if (state == 1){
+  pckt_count = 0;
+  INTAN_config.step_sel = 1000;
+  INTAN_config.max_size = 8;
+  INTAN_config.target_voltage = 1.2;
+  INTAN_config.CL_sel = 1;
 
-      update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
-      pckt_count++;
-      if(pckt_count == INTAN_config.max_size){
-        pckt_count = 0;
+  // create_arrays(&INTAN_config);
+  create_stim_SPI_arrays(&INTAN_config);
+  while(1){
+      if (state == 1){
+        update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
+        pckt_count++;
+        if(pckt_count == INTAN_config.max_size){
+          pckt_count = 0;
+        }
+        state = 2;      
+        ON_CS_pin();
+
       }
-      state = 2;      
-    }
-    else if (state == 2){
-      state = 1;
-      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      UCA0TXBUF = packet_1;
-      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      UCA0TXBUF = packet_2;
-      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      UCA0TXBUF = packet_3;
-      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      UCA0TXBUF = packet_4;
+      else if (state == 2){
+        OFF_CS_pin();
+        state = 1;
+        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+        UCA0TXBUF = packet_1;
+        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+        UCA0TXBUF = packet_2;
+        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+        UCA0TXBUF = packet_3;
+        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+        UCA0TXBUF = packet_4;
 
-    }
-}
+      }
+  }
 #endif
 }
 

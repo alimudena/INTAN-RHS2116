@@ -6,14 +6,14 @@
 typedef struct{
     uint16_t step_sel;
     uint16_t CL_sel;
-    uint8_t array1[8];
-    uint8_t array2[8];
-    uint8_t array3[8];
-    uint8_t array4[8];
+    uint8_t array1[50];
+    uint8_t array2[50];
+    uint8_t array3[50];
+    uint8_t array4[50];
     uint32_t max_size;
     float target_voltage;
     uint16_t I_pos_target_nA;
-    uint16_t I_neg_target_nA:
+    uint16_t I_neg_target_nA;
     } INTAN_config_struct;
 
 #endif
@@ -29,7 +29,9 @@ typedef struct{
  * @param val4 Pointer to store the fourth value.
  */
 
-void create_arrays(INTAN_config_struct* INTAN_config);
+void create_example_SPI_arrays(INTAN_config_struct* INTAN_config);
+void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config);
+
 
 void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4, INTAN_config_struct INTAN_config);
 
