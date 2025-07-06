@@ -5,12 +5,15 @@
 
 typedef struct{
     uint16_t step_sel;
+    uint16_t CL_sel;
     uint8_t array1[8];
     uint8_t array2[8];
     uint8_t array3[8];
     uint8_t array4[8];
     uint32_t max_size;
     float target_voltage;
+    uint16_t I_pos_target_nA;
+    uint16_t I_neg_target_nA:
     } INTAN_config_struct;
 
 #endif
@@ -34,5 +37,6 @@ uint16_t step_sel_united(uint16_t step_sel);
 
 void split_uint16(uint16_t input, uint8_t* high_byte, uint8_t* low_byte);
 
-
 uint8_t calculate_current_lim_chr_recov(float target_voltage);
+
+uint8_t calculate_stim_current(INTAN_config_struct* INTAN_config, uint16_t I_target_nA);

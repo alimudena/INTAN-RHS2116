@@ -143,8 +143,10 @@ int main(void) {
 #elif(SENSE_OR_STIM == 2)
 pckt_count = 0;
 INTAN_config.step_sel = 1000;
-INTAN_config.max_size = 4;
+INTAN_config.max_size = 8;
 INTAN_config.target_voltage = 1.2;
+INTAN_config.CL_sel = 1;
+
 create_arrays(&INTAN_config);
 while(1){
     if (state == 1){

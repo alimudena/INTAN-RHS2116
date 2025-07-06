@@ -4,7 +4,8 @@
 #define VALUES_VALUE_TEST_H 0b00100000
 #define VALUES_VALUE_TEST_L 0b00000011
 
-#define ZEROS_8 0b00000000
+#define ZEROS_8 0x00
+#define ONES_8  0xFF
 
 // Stimulation enable
 #define STIM_ENABLE_A_VALUE_H 0xAA
@@ -83,38 +84,59 @@
 
 
 //Current limited charge recovery
-#define SEL1_1nA   0
-#define SEL1_2nA   0
-#define SEL1_5nA   0
-#define SEL1_10nA  50
-#define SEL1_20nA  78
-#define SEL1_50nA  22
-#define SEL1_100nA 56
-#define SEL1_200nA 71
-#define SEL1_500nA 26
-#define SEL1_1uA   9
+#define CL_SEL1_1nA   0
+#define CL_SEL1_2nA   0
+#define CL_SEL1_5nA   0
+#define CL_SEL1_10nA  50
+#define CL_SEL1_20nA  78
+#define CL_SEL1_50nA  22
+#define CL_SEL1_100nA 56
+#define CL_SEL1_200nA 71
+#define CL_SEL1_500nA 26
+#define CL_SEL1_1uA   9
 
-#define SEL2_1nA   30
-#define SEL2_2nA   15
-#define SEL2_5nA   31
-#define SEL2_10nA  15
-#define SEL2_20nA  7
-#define SEL2_50nA  3
-#define SEL2_100nA 1
-#define SEL2_200nA 0
-#define SEL2_500nA 0
-#define SEL2_1uA   0
+#define CL_SEL2_1nA   30
+#define CL_SEL2_2nA   15
+#define CL_SEL2_5nA   31
+#define CL_SEL2_10nA  15
+#define CL_SEL2_20nA  7
+#define CL_SEL2_50nA  3
+#define CL_SEL2_100nA 1
+#define CL_SEL2_200nA 0
+#define CL_SEL2_500nA 0
+#define CL_SEL2_1uA   0
 
-#define SEL3_1nA   2
-#define SEL3_2nA   1
-#define SEL3_5nA   0
-#define SEL3_10nA  0
-#define SEL3_20nA  0
-#define SEL3_50nA  0
-#define SEL3_100nA 0
-#define SEL3_200nA 0
-#define SEL3_500nA 0
-#define SEL3_1uA   0
+#define CL_SEL3_1nA   2
+#define CL_SEL3_2nA   1
+#define CL_SEL3_5nA   0
+#define CL_SEL3_10nA  0
+#define CL_SEL3_20nA  0
+#define CL_SEL3_50nA  0
+#define CL_SEL3_100nA 0
+#define CL_SEL3_200nA 0
+#define CL_SEL3_500nA 0
+#define CL_SEL3_1uA   0
+
+//Stimulaiton ON or OFF and CHRG RECOV ON or OFF in each channel
+#define ALL_CH_OFF      ZEROS_8
+
+#define CH_0_ON_L       0b00000001
+#define CH_1_ON_L       0b00000010
+#define CH_2_ON_L       0b00000100
+#define CH_3_ON_L       0b00001000
+#define CH_4_ON_L       0b00010000
+#define CH_5_ON_L       0b00100000
+#define CH_6_ON_L       0b01000000
+#define CH_7_ON_L       0b10000000
+#define CH_8_ON_H       0b00000001
+#define CH_9_ON_H      0b00000010
+#define CH_10_ON_H      0b00000100
+#define CH_11_ON_H      0b00001000
+#define CH_12_ON_H      0b00010000
+#define CH_13_ON_H      0b00100000
+#define CH_14_ON_H      0b01000000
+#define CH_15_ON_H      0b10000000
+
 
 
 #endif
