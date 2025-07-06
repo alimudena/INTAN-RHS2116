@@ -129,7 +129,7 @@
 #define CH_6_ON_L       0b01000000
 #define CH_7_ON_L       0b10000000
 #define CH_8_ON_H       0b00000001
-#define CH_9_ON_H      0b00000010
+#define CH_9_ON_H       0b00000010
 #define CH_10_ON_H      0b00000100
 #define CH_11_ON_H      0b00001000
 #define CH_12_ON_H      0b00010000
