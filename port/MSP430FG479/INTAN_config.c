@@ -468,6 +468,8 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     reg_config_num++;
 
+    INTAN_config->max_size = reg_config_num;
+
 }
 
 

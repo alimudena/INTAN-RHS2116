@@ -54,3 +54,20 @@ void OFF_CS_pin(){
     P4OUT &= ~0x10;                          // Off   
 }
 
+
+//*****************************************************************************
+/*stim_en for INTAN*/
+//*****************************************************************************
+
+void stim_en_setup(){
+    P4DIR |= BIT5;                            // Set P4.4 to output direction
+}
+
+void stim_en_ON(){                               // On 
+    P4OUT |= 0x20;
+}
+
+void stim_en_OFF(){
+    P4OUT &= ~0x20;                          // Off   
+}
+

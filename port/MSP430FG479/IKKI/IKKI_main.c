@@ -4,10 +4,12 @@
 //              | |                 |  32kHz xtal
 //              --|RST          XOUT|-
 //                |                 |
-//          LED <-|P4.6   12        |
-// CS for INTAN <-|P4.4   14        |
+//                |   14        P4.4|--> CS for INTAN
+//                |   13        P4.5|--> stim_en for INTAN
+//                |   12        P4.6|--> LED
 //                |                 |
 //                |  ---  CLK  ---  |
+//                |                 |
 //                |             P1.1|--> MCLK = 8Mhz  --> 57 (referencia DCO)
 //                |             P1.4|--> SMCLK = 8MHz --> 54 (referencia DCO)
 //                |             P1.5|--> ACLK = 32kHz --> 51
@@ -16,12 +18,15 @@
 //                |             P2.5|<------- Receive Data (UCA0RXD) --> 75
 //                |             P2.4|-------> Transmit Data (UCA0TXD) --> 76
 //                |                 |
+//                |                 |
 //                |  ---  SPI  ---  |
+//                |                 |
 //                |             P2.4|-> Data Out (UCA0SIMO) --> 76
 //                |             P2.5|<- Data In (UCA0SOMI) --> 75
 //                |             P3.0|-> Serial Clock Out (UCA0CLK) --> 41
 //                |                 |
 //                |  ---  SD16 ---  |
+//                |                 |
 //                |             P1.5|<------- A3+: EEG1 positive input --> 51
 //                |             P1.4|<------- A3-: EEG1 negative input --> 54
 //                |                 |
@@ -93,8 +98,9 @@ uint8_t packet_4 = 4;
 uint16_t pckt_count = 0;
 
 
-#define UART_USAGE  false //True: UART, False: SPI
-#define SD16_USAGE false
+#define UART_USAGE    false //True: UART, False: SPI
+#define SD16_USAGE    false
+#define TEST_CLK      false
 #define SENSE_OR_STIM 2 //1:SENSE 2:STIM 
 
 CLK_config_struct CLK_config;
@@ -106,82 +112,84 @@ INTAN_config_struct INTAN_config;
 
 
 int main(void) {
-
   general_setup(CLK_config);
   init_MSP();
 
   //************************** CLK configuration *****************************
+  
   setup_CLK(CLK_config);
 
   //************************** LED configuration *****************************
   toggle_setup(); // Setup P4.6 for LED output
-
-#if (UART_USAGE)
-
-  //************************** UART configuration *****************************
-  setup_UART(UART_config);
-
+#if (TEST_CLK)
+  configure_PINS_for_clk_debug();
 
 #else
 
-  //************************** SPI configuration *****************************
-  SPI_configuration(SPI_config);
+  #if (UART_USAGE)
+    //************************** UART configuration *****************************
+    setup_UART(UART_config);
 
-#endif
+  #else
+    //************************** SPI configuration *****************************
+    SPI_configuration(SPI_config);
 
-
-#if (SENSE_OR_STIM==1)
-  #if (SD16_USAGE)
-    //************************** SD16 configuration *****************************
-    setup_SD16A(SD16A_configuration);
-    enable_interruption_SD16A(true);
-    start_conversion(); // While it is started, working in continuous mode will
-                        // sample the channel A until it is stopped
   #endif
-    UCA0TXBUF = 0x45; // Transmit first character
 
-    enable_interruptions(true);
+  #if (SENSE_OR_STIM==1)
+    #if (SD16_USAGE)
+      //************************** SD16 configuration *****************************
+      setup_SD16A(SD16A_configuration);
+      enable_interruption_SD16A(true);
+      start_conversion(); // While it is started, working in continuous mode will
+                          // sample the channel A until it is stopped
+    #endif
+      UCA0TXBUF = 0x45; // Transmit first character
 
-    IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-#elif(SENSE_OR_STIM == 2)
-  CS_setup();
-  ON_CS_pin();
+      enable_interruptions(true);
 
-  pckt_count = 0;
-  INTAN_config.step_sel = 1000;
-  INTAN_config.max_size = 8;
-  INTAN_config.target_voltage = 1.2;
-  INTAN_config.CL_sel = 1;
+      IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
+  #elif(SENSE_OR_STIM == 2)
+    CS_setup();
+    ON_CS_pin();
+    stim_en_setup();
 
-  // create_arrays(&INTAN_config);
-  create_stim_SPI_arrays(&INTAN_config);
-  while(1){
-      if (state == 1){
-        update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
-        pckt_count++;
-        if(pckt_count == INTAN_config.max_size){
-          pckt_count = 0;
+    pckt_count = 0;
+    INTAN_config.step_sel = 1000;
+
+    INTAN_config.target_voltage = 1.2;
+    INTAN_config.CL_sel = 1;
+    stim_en_OFF();
+    // create_arrays(&INTAN_config);
+    create_stim_SPI_arrays(&INTAN_config);
+    while(1){
+      if(pckt_count == INTAN_config.max_size){
+            stim_en_ON();
+      }else{
+        if (state == 1){
+          update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
+          pckt_count++;
+          state = 2;      
         }
-        state = 2;      
-        ON_CS_pin();
-
+        else if (state == 2){
+          OFF_CS_pin();
+          state = 1;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_1;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_2;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_3;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_4;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          ON_CS_pin(); 
+        }
       }
-      else if (state == 2){
-        OFF_CS_pin();
-        state = 1;
-        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-        UCA0TXBUF = packet_1;
-        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-        UCA0TXBUF = packet_2;
-        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-        UCA0TXBUF = packet_3;
-        while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-        UCA0TXBUF = packet_4;
-
-      }
+    }
+  #endif
   }
 #endif
-}
 
 
 
@@ -189,8 +197,7 @@ int main(void) {
 
 
 
-
-#if (SENSE_OR_STIM == 1)
+#if (SENSE_OR_STIM == 1 && TEST_CLK == false)
 
   //***************************************************************************** 
   //Interrupción de la UART
@@ -222,22 +229,15 @@ int main(void) {
                   state = 1;                // Solo aquí finalizamos la transmisión completa de los bytes
                   SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
                   IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-
               }
               high_or_low = !high_or_low;   // Alterna entre alto y bajo
-
-          }else{
-              
           }
-
       }
-
   #else
-      
+
     //*****************************************************************************
     // Interrupción del SPI
     //*****************************************************************************
-
     #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
     #pragma vector = USCIAB0RX_VECTOR
     __interrupt void USCIA0RX_ISR(void)
@@ -266,7 +266,6 @@ int main(void) {
           high_or_low = !high_or_low; // Alterna entre alto y bajo
         }
       }
-
     }
   #endif
 
@@ -276,8 +275,6 @@ int main(void) {
   //*****************************************************************************
   // Interrupción del SD16_A
   //*****************************************************************************
-
-
   #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
   #pragma vector = SD16A_VECTOR
   __interrupt void SD16ISR(void)
@@ -312,9 +309,7 @@ int main(void) {
         IE2 |= UCA0RXIE;                         // Enabling UART interrupt
         SD16CCTL0 &= ~(SD16IE);                  // Disabling SD16 interrupt
       }
-
       break;
     }
   }
-
 #endif
