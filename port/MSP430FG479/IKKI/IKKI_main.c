@@ -73,6 +73,7 @@ State machine for INTAN configuration: working with polling
 #include "../functions/system_config.h"
 #include "../functions/general_functions.h"
 #include "../functions/SD16_A.h"
+#include "../functions/FLL.h"
 
 #include "IKKI_MAC.h"
 
@@ -87,21 +88,26 @@ State machine for INTAN configuration: working with polling
 
 
 int state = 1;
-uint8_t high_word = 0x00;
-uint8_t low_word = 0xFF;
+volatile uint8_t high_word = 0x00;
+volatile uint8_t low_word = 0xFF;
 bool high_or_low = true;
+int i;
 uint16_t my_register = 0;
 uint8_t packet_1 = 1;
 uint8_t packet_2 = 2;
 uint8_t packet_3 = 3;
 uint8_t packet_4 = 4;
-uint16_t pckt_count = 0;
 
 
 #define UART_USAGE    false //True: UART, False: SPI
-#define SD16_USAGE    false
+#define SD16_USAGE    true
 #define TEST_CLK      false
-#define SENSE_OR_STIM 2 //1:SENSE 2:STIM 
+#define SENSE_OR_STIM 3 //1: SENSE interruptions 2: SENSE while 3:STIM 
+#if (SENSE_OR_STIM != 3)
+
+  #define ECG_or_EEG 1    //1: ECG experiment 2: EEG experiment 3: ECG + BAT 4: EEG + BAT
+
+#endif
 
 CLK_config_struct CLK_config;
 SD16A_config_struct SD16A_configuration;
@@ -109,91 +115,236 @@ UART_config_struct UART_config;
 SPI_config_struct SPI_config;
 INTAN_config_struct INTAN_config;
 
-
-
-int main(void) {
-  general_setup(CLK_config);
-  init_MSP();
-
-  //************************** CLK configuration *****************************
+#if (SENSE_OR_STIM != 3)
+void config_SD16A(SD16A_config_struct* SD16A_configuration){
   
-  setup_CLK(CLK_config);
+      // -- Entrada analógica
+      SD16A_configuration->analog_input_being_sampled = 0;
+#if (ECG_or_EEG==1)
+      SD16A_configuration->analog_input_count = 1;
+      SD16A_configuration->analog_input[0] = ECG;  // 0: A0 - ECG
+      SD16A_configuration->analog_input_ID[0] = 0x30; // 0: A0 - ECG
 
-  //************************** LED configuration *****************************
-  toggle_setup(); // Setup P4.6 for LED output
-#if (TEST_CLK)
-  configure_PINS_for_clk_debug();
+#elif (ECG_or_EEG==2)
+      SD16A_configuration->analog_input_count = 3;
 
-#else
+      SD16A_configuration->analog_input[0] = EEG3; // 1: A1 - EEG3
+      SD16A_configuration->analog_input[1] = EEG2; // 2: A2 - EEG2
+      SD16A_configuration->analog_input[2] = EEG1; // 3: A3 - EEG1
 
-  #if (UART_USAGE)
-    //************************** UART configuration *****************************
-    setup_UART(UART_config);
+      SD16A_configuration->analog_input_ID[0] = 0x30; // 2: A2 - EEG2
+      SD16A_configuration->analog_input_ID[1] = 0x31; // 1: A1 - EEG3
+      SD16A_configuration->analog_input_ID[2] = 0x32; // 3: A3 - EEG1
+#elif (ECG_or_EEG==3)
+      SD16A_configuration->analog_input_count = 2;
 
-  #else
-    //************************** SPI configuration *****************************
-    SPI_configuration(SPI_config);
+      SD16A_configuration->analog_input[0] = ECG;  // 0: A0 - ECG
+      SD16A_configuration->analog_input[1] = BATT; // 4: A4 - BATT
 
-  #endif
+      SD16A_configuration->analog_input_ID[0] = 0x30; // 0: A0 - ECG
+      SD16A_configuration->analog_input_ID[1] = 0x31; // 4: A4 - BATT
 
-  #if (SENSE_OR_STIM==1)
-    #if (SD16_USAGE)
-      //************************** SD16 configuration *****************************
-      setup_SD16A(SD16A_configuration);
-      enable_interruption_SD16A(true);
-      start_conversion(); // While it is started, working in continuous mode will
-                          // sample the channel A until it is stopped
-    #endif
-      UCA0TXBUF = 0x45; // Transmit first character
+#elif (ECG_or_EEG==4)
+      SD16A_configuration->analog_input_count = 4;
 
-      enable_interruptions(true);
+      SD16A_configuration->analog_input[0] = EEG3; // 1: A1 - EEG3
+      SD16A_configuration->analog_input[1] = EEG2; // 2: A2 - EEG2
+      SD16A_configuration->analog_input[2] = EEG1; // 3: A3 - EEG1
+      SD16A_configuration->analog_input[3] = BATT; // 4: A4 - BATT
 
-      IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-  #elif(SENSE_OR_STIM == 2)
-    CS_setup();
-    ON_CS_pin();
-    stim_en_setup();
+      SD16A_configuration->analog_input_ID[0] = 0x30; // 2: A2 - EEG2
+      SD16A_configuration->analog_input_ID[1] = 0x31; // 1: A1 - EEG3
+      SD16A_configuration->analog_input_ID[2] = 0x32; // 3: A3 - EEG1
+      SD16A_configuration->analog_input_ID[3] = 0x33; // 4: A4 - BATT
 
-    pckt_count = 0;
-    INTAN_config.step_sel = 1000;
-
-    INTAN_config.target_voltage = 1.2;
-    INTAN_config.CL_sel = 1;
-    stim_en_OFF();
-    // create_arrays(&INTAN_config);
-    create_stim_SPI_arrays(&INTAN_config);
-    while(1){
-      if(pckt_count == INTAN_config.max_size){
-            stim_en_ON();
-      }else{
-        if (state == 1){
-          update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
-          pckt_count++;
-          state = 2;      
-        }
-        else if (state == 2){
-          OFF_CS_pin();
-          state = 1;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_1;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_2;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_3;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_4;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          ON_CS_pin(); 
-        }
-      }
-    }
-  #endif
-  }
 #endif
 
+      // -- Tensión de referencia
+      SD16A_configuration->v_ref = 'I'; // I: Internal (1.2V), O: Off-chip, E: External
+              // -- Reloj de referencia
+      SD16A_configuration->clk_ref = 'M'; // M: MCLK, S: SMCLK, A: AC1LK, T: TACLK
+                                        // -- Divisor de frecuencia de referencia
+      SD16A_configuration->clk_div_1 = 1;
+      SD16A_configuration->clk_div_2 = 1;
+      // -- Método de lectura: Polling o Interrupciones
+      SD16A_configuration->interruption_SD16A = true;
+      // -- Over Sampling Ratio
+      SD16A_configuration->OSR = 512; // 1, 32, 64, 128, 256, 512, 1024
+      // -- Ganancia
+      SD16A_configuration->gain = 1; // 1, 2, 4, 8, 16 or 32
+      // -- Método de conversión
+      SD16A_configuration->conv_mode = 'C'; // C: Continuous  S: Single
+                                          // -- Tipo de datos
+      SD16A_configuration->polarity = 'U';  // B : Bipolar, U : unipolar
+      SD16A_configuration->sign = 'O';      // O : Offset, C : 2's complement
+
+      SD16A_configuration->sampled = false;
+}
+
+void config_SPI(SPI_config_struct* SPI_config){
+  SPI_config->Master_Slave = 'M';       //M: MSB, L: LSB
+  SPI_config->inactive_state = 'H';     // clock polarity inactive high
+  //data cHanged on the first UCLK edge and captured on the following edge
+  //data cAptured on the first UCLK edge and changed on the following edge
+  SPI_config->data_on_clock_edge = 'A'; // data cAptured on the first UCLK edge and changed on the following edge
+  SPI_config->SPI_length = 8;
+  SPI_config->first_Byte_sent = 'M';
+    /*clk_ref:
+      U --> UCLK
+      A --> ACLK
+      S --> SMCLK
+  */
+  SPI_config->clk_ref_SPI = 'S';
+  SPI_config->clk_div = 2;
+  SPI_config->enable_USCI_interr_rx = false;
+  SPI_config->enable_USCI_interr_tx = false;
+}
+#endif
+
+int main(void) {
+    general_setup(CLK_config);
+    init_MSP();
+
+    //************************** CLK configuration *****************************
+    
+    setup_CLK(CLK_config);
+
+    //************************** LED configuration *****************************
+    toggle_setup(); // Setup P4.6 for LED output
+  #if (TEST_CLK)
+    configure_PINS_for_clk_debug();
+
+  #else
+
+    #if (UART_USAGE)
+      //************************** UART configuration *****************************
+      setup_UART(UART_config);
+
+    #else
+      //************************** SPI configuration *****************************
+      config_SPI(&SPI_config);
+      SPI_setup(&SPI_config);
+
+    #endif
+
+    #if (SENSE_OR_STIM==1)
+      #if (SD16_USAGE)
+        //************************** SD16 configuration *****************************
+        config_SD16A(&SD16A_configuration);
+        setup_SD16A(&SD16A_configuration);
+        enable_interruption_SD16A(true);
+        start_conversion(); // While it is started, working in continuous mode will
+                            // sample the channel A until it is stopped
+      #endif
+        UCA0TXBUF = 0x45; // Transmit first character
+
+        enable_interruptions(true);
+
+        IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
+  }
+  #elif(SENSE_OR_STIM == 2)
+      UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
+
+      //************************** SD16 configuration *****************************
+      config_SD16A(&SD16A_configuration);
+      setup_SD16A(&SD16A_configuration);
+      start_conversion(); // While it is started, working in continuous mode will
+
+      SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
+      IE2 &= ~(UCA0RXIE|UCA0TXIE);  // Disabling UART interrupt
+      while(1){
+        if (state == 1){
+          my_register = SD16MEM0; // Save CH0 results (clears IFG)
+
+          // 1. select_analog_input(SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled]);
+          // First, clean the bits so to not have more than one channel reading
+          SD16INCTL0 &=  ~(SD16INCH_0 | SD16INCH_1 | SD16INCH_2 | SD16INCH_3 | SD16INCH_4);
+          SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
+          #if (ECG_or_EEG != 1)
+          // 2. Wait for stability
+          __delay_cycles(1600);        // 12.5 µs @ 8 MHz
+
+          // 3. Start conversion and discard
+          SD16CCTL0 |= SD16SC;
+          while (!(SD16CCTL0 & SD16IFG));
+          volatile int dummy = SD16MEM0;   // discard
+          #endif
+
+          // 4. Do real lecture
+          SD16CCTL0 |= SD16SC;
+          while (!(SD16CCTL0 & SD16IFG));
+          
+          my_register = SD16MEM0; // Save CH0 results (clears IFG)
+
+          // Update the channel to be read the next
+          SD16A_configuration.analog_input_being_sampled++;
+          if (SD16A_configuration.analog_input_being_sampled == SD16A_configuration.analog_input_count) {
+            SD16A_configuration.analog_input_being_sampled = 0;
+          }
+          high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
+          low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
+          state = 3;
+
+        } else if (state == 3) {
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = high_word;    // Envía el byte alto
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = low_word;     // Envía el byte bajo
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            state = 1;                // Solo aquí finalizamos la transmisión completa de los bytes
+          }
+        }
+ 
 
 
+    #elif(SENSE_OR_STIM == 3)
+      CS_setup();
+      ON_CS_pin();
+      stim_en_setup();
 
+      pckt_count = 0;
+      INTAN_config.step_sel = 1000;
+
+      INTAN_config.target_voltage = 1.2;
+      INTAN_config.CL_sel = 1;
+      stim_en_OFF();
+      // create_arrays(&INTAN_config);
+      create_stim_SPI_arrays(&INTAN_config);
+      while(1){
+        if(pckt_count == INTAN_config.max_size){
+              stim_en_ON();
+              wait_time(1, 8000);
+              stim_en_OFF();
+              wait_time(1, 8000);
+        }else{
+          if (state == 1){
+            update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
+            pckt_count++;
+            state = 2;      
+          }
+          else if (state == 2){
+            OFF_CS_pin();
+            state = 1;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = packet_1;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = packet_2;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = packet_3;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = packet_4;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            ON_CS_pin(); 
+          }
+        }
+      }
+    #endif
+
+  #endif
+    
+}
 
 
 
@@ -204,45 +355,11 @@ int main(void) {
   //***************************************************************************** 
   #if (UART_USAGE == true)
       //TX interrupt handler
-
-      #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-      #pragma vector=USCIAB0TX_VECTOR
-      __interrupt void USCI_A0_Tx (void)
-      #elif defined(__GNUC__)
-      void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI_A0_Tx (void)
-      #else
-      #error Compiler not supported!
-      #endif
-      {
-          if (state == 1){
-              UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
-              state = 2;
-              SD16CCTL0 |= SD16IE;          // Enabling SD16 interrupt    
-              IE2 &= ~(UCA0RXIE|UCA0TXIE);  // Disabling UART interrupt
-
-          }
-          if (state == 3) {
-              if (high_or_low) {
-                  UCA0TXBUF = high_word;    // Envía el byte alto
-              } else {
-                  UCA0TXBUF = low_word;     // Envía el byte bajo
-                  state = 1;                // Solo aquí finalizamos la transmisión completa de los bytes
-                  SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
-                  IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-              }
-              high_or_low = !high_or_low;   // Alterna entre alto y bajo
-          }
-      }
-  #else
-
-    //*****************************************************************************
-    // Interrupción del SPI
-    //*****************************************************************************
     #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-    #pragma vector = USCIAB0RX_VECTOR
-    __interrupt void USCIA0RX_ISR(void)
+    #pragma vector=USCIAB0TX_VECTOR
+    __interrupt void USCI_A0_Tx (void)
     #elif defined(__GNUC__)
-    void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
+    void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI_A0_Tx (void)
     #else
     #error Compiler not supported!
     #endif
@@ -251,9 +368,8 @@ int main(void) {
         UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
         state = 2;
         SD16CCTL0 |= SD16IE;         // Enabling SD16 interrupt
-        IE2 &= ~(UCA0RXIE);          // Disabling SPI interrupt
-      }
-      if (state == 3) {
+        IE2 &= ~(UCA0RXIE+UCA0TXIE);          // Disabling SPI interrupt
+      }else if (state == 3) {
         if (high_or_low) {
           UCA0TXBUF = high_word;      // Envía el byte alto
           high_or_low = !high_or_low; // Alterna entre alto y bajo
@@ -262,7 +378,45 @@ int main(void) {
           UCA0TXBUF = low_word;       // Envía el byte bajo
           state = 1;                  // Solo aquí finalizamos la transmisión completa de los bytes
           SD16CCTL0 &= ~(SD16IE);     // Disabling SD16 interrupt
-          IE2 |= UCA0RXIE;            // Enabling SPI interrupt
+          IE2 |= UCA0RXIE+UCA0TXIE;   // Enabling SPI interrupt
+
+          high_or_low = !high_or_low; // Alterna entre alto y bajo
+        }
+      }
+    }
+
+  #else
+    //*****************************************************************************
+    // Interrupción del SPI
+    //*****************************************************************************
+    
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector = USCIAB0RX_VECTOR
+__interrupt void USCIA0RX_ISR(void)
+#elif defined(__GNUC__)
+void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
+#else
+#error Compiler not supported!
+#endif
+    {
+      if (state == 1) {
+        
+        UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
+        state = 2;
+        SD16CCTL0 |= SD16IE;         // Enabling SD16 interrupt
+        IE2 &= ~(UCA0RXIE+UCA0TXIE);          // Disabling SPI interrupt
+
+      }else if (state == 3) {
+        if (high_or_low) {
+          UCA0TXBUF = high_word;      // Envía el byte alto
+          high_or_low = !high_or_low; // Alterna entre alto y bajo
+
+        } else {
+          UCA0TXBUF = low_word;       // Envía el byte bajo
+          state = 1;                  // Solo aquí finalizamos la transmisión completa de los bytes
+          SD16CCTL0 &= ~(SD16IE);     // Disabling SD16 interrupt
+          IE2 |= UCA0RXIE+UCA0TXIE;   // Enabling SPI interrupt
+
           high_or_low = !high_or_low; // Alterna entre alto y bajo
         }
       }
@@ -290,23 +444,39 @@ int main(void) {
       break;
     case 4: // SD16MEM0 IFG
       if (state == 2) {
+       
+        // 1. select_analog_input(SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled]);
+        // First, clean the bits so to not have more than one channel reading
+        SD16INCTL0 &=  ~(SD16INCH_0 | SD16INCH_1 | SD16INCH_2 | SD16INCH_3 | SD16INCH_4);
+        SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
+        #if (ECG_or_EEG != 1)
+        // 2. Wait for stability
+        __delay_cycles(1600);        // 12.5 µs @ 8 MHz
+
+        // 3. Start conversion and discard
+        SD16CCTL0 |= SD16SC;
+        while (!(SD16CCTL0 & SD16IFG));
+        volatile int dummy = SD16MEM0;   // discard
+        #endif
+
+        // 4. Do real lecture
+        SD16CCTL0 |= SD16SC;
+        while (!(SD16CCTL0 & SD16IFG));
+        
         my_register = SD16MEM0; // Save CH0 results (clears IFG)
+
+        // Update the channel to be read the next
         SD16A_configuration.analog_input_being_sampled++;
         if (SD16A_configuration.analog_input_being_sampled == SD16A_configuration.analog_input_count) {
           SD16A_configuration.analog_input_being_sampled = 0;
         }
-        // select_analog_input(SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled]);
-        // First, clean the bits so to not have more than one channel reading
-        SD16INCTL0 &=  ~(SD16INCH_0 | SD16INCH_1 | SD16INCH_2 | SD16INCH_3 | SD16INCH_4);
-        SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
-
         high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
         low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
         state = 3;
-        IE2 |= UCA0RXIE;                         // Enabling UART interrupt
+        IE2 |= UCA0RXIE+UCA0TXIE;                // Enabling SPI interrupt
         SD16CCTL0 &= ~(SD16IE);                  // Disabling SD16 interrupt
       } else {
-        IE2 |= UCA0RXIE;                         // Enabling UART interrupt
+        IE2 |= UCA0RXIE+UCA0TXIE;                // Enabling SPI interrupt
         SD16CCTL0 &= ~(SD16IE);                  // Disabling SD16 interrupt
       }
       break;

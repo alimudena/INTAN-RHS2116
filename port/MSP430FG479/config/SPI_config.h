@@ -39,4 +39,4 @@ typedef struct{
 
 #endif
 
-void SPI_configuration(SPI_config_struct SPI_config);
+void SPI_setup(SPI_config_struct* SPI_config);

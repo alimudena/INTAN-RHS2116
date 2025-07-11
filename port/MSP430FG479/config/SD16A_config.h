@@ -34,4 +34,4 @@ typedef struct{
 
 #endif
 
-void setup_SD16A(SD16A_config_struct SD16A_configuration);
+void setup_SD16A(SD16A_config_struct* SD16A_configuration);

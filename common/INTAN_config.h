@@ -42,3 +42,5 @@ void split_uint16(uint16_t input, uint8_t* high_byte, uint8_t* low_byte);
 uint8_t calculate_current_lim_chr_recov(float target_voltage);
 
 uint8_t calculate_stim_current(INTAN_config_struct* INTAN_config, uint16_t I_target_nA);
+
+void wait_time(uint64_t time_waited, uint64_t freqKHz);
