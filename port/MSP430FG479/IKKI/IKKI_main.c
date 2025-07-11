@@ -93,6 +93,7 @@ volatile uint8_t low_word = 0xFF;
 bool high_or_low = true;
 int i;
 uint16_t my_register = 0;
+uint16_t pckt_count;
 uint8_t packet_1 = 1;
 uint8_t packet_2 = 2;
 uint8_t packet_3 = 3;
@@ -100,12 +101,15 @@ uint8_t packet_4 = 4;
 
 
 #define UART_USAGE    false //True: UART, False: SPI
-#define SD16_USAGE    true
 #define TEST_CLK      false
 #define SENSE_OR_STIM 3 //1: SENSE interruptions 2: SENSE while 3:STIM 
 #if (SENSE_OR_STIM != 3)
 
   #define ECG_or_EEG 1    //1: ECG experiment 2: EEG experiment 3: ECG + BAT 4: EEG + BAT
+  #define SD16_USAGE true
+#else
+  #define TIME_WAITED 2
+  #define CLK_CYCLES (TIME_WAITED * 8000000U)
 
 #endif
 
@@ -180,7 +184,7 @@ void config_SD16A(SD16A_config_struct* SD16A_configuration){
 
       SD16A_configuration->sampled = false;
 }
-
+#endif
 void config_SPI(SPI_config_struct* SPI_config){
   SPI_config->Master_Slave = 'M';       //M: MSB, L: LSB
   SPI_config->inactive_state = 'H';     // clock polarity inactive high
@@ -199,7 +203,7 @@ void config_SPI(SPI_config_struct* SPI_config){
   SPI_config->enable_USCI_interr_rx = false;
   SPI_config->enable_USCI_interr_tx = false;
 }
-#endif
+
 
 int main(void) {
     general_setup(CLK_config);
@@ -216,32 +220,32 @@ int main(void) {
 
   #else
 
-    #if (UART_USAGE)
-      //************************** UART configuration *****************************
-      setup_UART(UART_config);
+  #if (UART_USAGE)
+    //************************** UART configuration *****************************
+    setup_UART(UART_config);
 
-    #else
-      //************************** SPI configuration *****************************
-      config_SPI(&SPI_config);
-      SPI_setup(&SPI_config);
+  #else
+    //************************** SPI configuration *****************************
+    config_SPI(&SPI_config);
+    SPI_setup(&SPI_config);
 
+  #endif
+
+  #if (SENSE_OR_STIM==1)
+    #if (SD16_USAGE)
+      //************************** SD16 configuration *****************************
+      config_SD16A(&SD16A_configuration);
+      setup_SD16A(&SD16A_configuration);
+      enable_interruption_SD16A(true);
+      start_conversion(); // While it is started, working in continuous mode will
+                          // sample the channel A until it is stopped
     #endif
+      UCA0TXBUF = 0x45; // Transmit first character
 
-    #if (SENSE_OR_STIM==1)
-      #if (SD16_USAGE)
-        //************************** SD16 configuration *****************************
-        config_SD16A(&SD16A_configuration);
-        setup_SD16A(&SD16A_configuration);
-        enable_interruption_SD16A(true);
-        start_conversion(); // While it is started, working in continuous mode will
-                            // sample the channel A until it is stopped
-      #endif
-        UCA0TXBUF = 0x45; // Transmit first character
+      enable_interruptions(true);
 
-        enable_interruptions(true);
-
-        IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
-  }
+      IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
+  
   #elif(SENSE_OR_STIM == 2)
       UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
 
@@ -261,13 +265,13 @@ int main(void) {
           SD16INCTL0 &=  ~(SD16INCH_0 | SD16INCH_1 | SD16INCH_2 | SD16INCH_3 | SD16INCH_4);
           SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
           #if (ECG_or_EEG != 1)
-          // 2. Wait for stability
-          __delay_cycles(1600);        // 12.5 µs @ 8 MHz
+            // 2. Wait for stability
+            __delay_cycles(1600);        // 12.5 µs @ 8 MHz
 
-          // 3. Start conversion and discard
-          SD16CCTL0 |= SD16SC;
-          while (!(SD16CCTL0 & SD16IFG));
-          volatile int dummy = SD16MEM0;   // discard
+            // 3. Start conversion and discard
+            SD16CCTL0 |= SD16SC;
+            while (!(SD16CCTL0 & SD16IFG));
+            volatile int dummy = SD16MEM0;   // discard
           #endif
 
           // 4. Do real lecture
@@ -315,9 +319,10 @@ int main(void) {
       while(1){
         if(pckt_count == INTAN_config.max_size){
               stim_en_ON();
-              wait_time(1, 8000);
+              __delay_cycles(CLK_CYCLES);
+
               stim_en_OFF();
-              wait_time(1, 8000);
+              __delay_cycles(CLK_CYCLES);
         }else{
           if (state == 1){
             update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
@@ -341,10 +346,9 @@ int main(void) {
         }
       }
     #endif
-
   #endif
-    
 }
+
 
 
 

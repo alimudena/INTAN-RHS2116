@@ -491,9 +491,4 @@ void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* 
 }
 
 
-void wait_time(uint64_t time_waited_ms, uint64_t freqKHz){
-    volatile uint64_t counter = time_waited_ms*freqKHz/80;
-    for(counter; counter > 0; counter--);
-}
-
 
