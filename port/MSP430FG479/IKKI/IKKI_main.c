@@ -15,15 +15,15 @@
 //                |             P1.5|--> ACLK = 32kHz --> 51
 //                |                 |
 //                |  ---  UART ---  |
-//                |             P2.5|<------- Receive Data (UCA0RXD) --> 75
-//                |             P2.4|-------> Transmit Data (UCA0TXD) --> 76
+//                |  75         P2.5|<------- Receive Data (UCA0RXD) 
+//                |  76         P2.4|-------> Transmit Data (UCA0TXD) 
 //                |                 |
 //                |                 |
 //                |  ---  SPI  ---  |
 //                |                 |
-//                |             P2.4|-> Data Out (UCA0SIMO) --> 76
-//                |             P2.5|<- Data In (UCA0SOMI) --> 75
-//                |             P3.0|-> Serial Clock Out (UCA0CLK) --> 41
+//                |  76         P2.4|-> Data Out (UCA0SIMO) 
+//                |  75         P2.5|<- Data In (UCA0SOMI)
+//                |  41         P3.0|-> Serial Clock Out (UCA0CLK)
 //                |                 |
 //                |  ---  SD16 ---  |
 //                |                 |
@@ -104,13 +104,10 @@ uint8_t packet_4 = 4;
 #define TEST_CLK      false
 #define SENSE_OR_STIM 3 //1: SENSE interruptions 2: SENSE while 3:STIM 
 #if (SENSE_OR_STIM != 3)
-
   #define ECG_or_EEG 1    //1: ECG experiment 2: EEG experiment 3: ECG + BAT 4: EEG + BAT
   #define SD16_USAGE true
-#else
-  #define TIME_WAITED 2
-  #define CLK_CYCLES (TIME_WAITED * 8000000U)
-
+#elif(SENSE_OR_STIM ==3)
+  uint8_t num_stim = 5;
 #endif
 
 CLK_config_struct CLK_config;
@@ -316,33 +313,41 @@ int main(void) {
       stim_en_OFF();
       // create_arrays(&INTAN_config);
       create_stim_SPI_arrays(&INTAN_config);
-      while(1){
-        if(pckt_count == INTAN_config.max_size){
-              stim_en_ON();
-              __delay_cycles(CLK_CYCLES);
+      while(pckt_count != INTAN_config.max_size){       
+        if (state == 1){
+          update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
+          pckt_count++;
+          state = 2;      
+        }
+        else if (state == 2){
+          OFF_CS_pin();
+          state = 1;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_1;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_2;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_3;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = packet_4;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          ON_CS_pin();           
+        }
+      }
+        bool button_pressed =true;
 
-              stim_en_OFF();
-              __delay_cycles(CLK_CYCLES);
-        }else{
-          if (state == 1){
-            update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
-            pckt_count++;
-            state = 2;      
+      while(1){
+        if(button_pressed == true){
+          num_stim = 5;
+          while(num_stim > 0){
+                stim_en_ON();
+                wait_3_seconds();
+                stim_en_OFF();
+                wait_5_seconds();
+                num_stim--;
           }
-          else if (state == 2){
-            OFF_CS_pin();
-            state = 1;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = packet_1;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = packet_2;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = packet_3;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = packet_4;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            ON_CS_pin(); 
-          }
+          button_pressed = false;
+          button_pressed = true;
         }
       }
     #endif

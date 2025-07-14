@@ -3,6 +3,17 @@
 #ifndef INTAN_CONFIG_H
 #define INTAN_CONFIG_H
 
+#define FREQ_MASTER 8000000U
+
+#define CLK_30_S_CYCLES (30 * FREQ_MASTER)
+#define CLK_3_S_CYCLES (3 * FREQ_MASTER)
+
+#define FIVE_SECONDS 5
+#define CLK_5_S_CYCLES (FIVE_SECONDS * FREQ_MASTER)
+
+#define FIVE_MINUTES 5*60
+#define CLK_5_M_CYCLES (FIVE_MINUTES * FREQ_MASTER)
+
 typedef struct{
     uint16_t step_sel;
     uint16_t CL_sel;
@@ -43,4 +54,8 @@ uint8_t calculate_current_lim_chr_recov(float target_voltage);
 
 uint8_t calculate_stim_current(INTAN_config_struct* INTAN_config, uint16_t I_target_nA);
 
+void wait_30_seconds();
+void wait_5_mins();
 
+void wait_3_seconds();
+void wait_5_seconds();

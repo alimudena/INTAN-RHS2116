@@ -445,7 +445,12 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
     reg_config_num++;
 
     //12. Establece las corrientes negativas de estimulacion en cero centrando los ajustes de corriente (64...)
+    
+    
     //13. Establece las corrientes positivas de estimulacion en cero centrando los ajustes de corriente (96...)
+    
+    
+    
     //14. Habilitar la estimulacion de los estimuladores (32, 33)
     //REGISTER 32: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
@@ -490,5 +495,20 @@ void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* 
     *val4 = INTAN_config.array4[pckt_count];
 }
 
+void wait_30_seconds(){
+    __delay_cycles(CLK_30_S_CYCLES);
+}
+
+void wait_5_mins(){
+    __delay_cycles(CLK_5_M_CYCLES);
+}
+
+void wait_3_seconds(){
+    __delay_cycles(CLK_3_S_CYCLES);
+}
+
+void wait_5_seconds(){
+    __delay_cycles(CLK_5_S_CYCLES);
+}
 
 
