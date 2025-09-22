@@ -7,6 +7,170 @@
 #define ZEROS_8 0x00
 #define ONES_8  0xFF
 
+// Clear function returns
+#define ZEROS_32 0x00000000
+#define RETURN_CLEAR_2C 0b10000000000000000000000000000000
+
+// Chip ID
+#define CHIP_ID 0x00000020
+
+
+// Cutoff Frequency high
+#define RH1_SEL1_20K           0x08  //8
+#define RH1_SEL1_15K           0x0B  //11
+#define RH1_SEL1_10K           0x11  //17
+#define RH1_SEL1_7_5K          0x16  //22
+#define RH1_SEL1_5K            0x21  //33
+#define RH1_SEL1_3K            0x03  //3
+#define RH1_SEL1_2_5K          0x0D  //13
+#define RH1_SEL1_2K            0x1B  //27
+#define RH1_SEL1_1_5K          0x01  //1
+#define RH1_SEL1_1K            0x2E  //46
+#define RH1_SEL1_750H          0x29  //41
+#define RH1_SEL1_500H          0x1E  //30
+#define RH1_SEL1_300H          0x06  //6
+#define RH1_SEL1_250H          0x2A  //42
+#define RH1_SEL1_200H          0x18  //24
+#define RH1_SEL1_150H          0x2C  //44
+#define RH1_SEL1_100H          0x26  //38
+
+#define RH1_SEL2_20K           0x00  //0
+#define RH1_SEL2_15K           0x00  //0
+#define RH1_SEL2_10K           0x00  //0
+#define RH1_SEL2_7_5K          0x00  //0
+#define RH1_SEL2_5K            0x00  //0
+#define RH1_SEL2_3K            0x01  //1
+#define RH1_SEL2_2_5K          0x01  //1
+#define RH1_SEL2_2K            0x01  //1
+#define RH1_SEL2_1_5K          0x02  //2
+#define RH1_SEL2_1K            0x02  //2
+#define RH1_SEL2_750H          0x03  //3
+#define RH1_SEL2_500H          0x05  //5
+#define RH1_SEL2_300H          0x09  //9
+#define RH1_SEL2_250H          0x0A  //10
+#define RH1_SEL2_200H          0x0D  //13
+#define RH1_SEL2_150H          0x11  //17
+#define RH1_SEL2_100H          0x1A  //26
+
+#define RH2_SEL1_20K           0x04  //4
+#define RH2_SEL1_15K           0x08  //8
+#define RH2_SEL1_10K           0x10  //16
+#define RH2_SEL1_7_5K          0x17  //23
+#define RH2_SEL1_5K            0x25  //37
+#define RH2_SEL1_3K            0x0D  //13
+#define RH2_SEL1_2_5K          0x19  //25
+#define RH2_SEL1_2K            0x2C  //44
+#define RH2_SEL1_1_5K          0x17  //23
+#define RH2_SEL1_1K            0x1E  //30
+#define RH2_SEL1_750H          0x24  //36
+#define RH2_SEL1_500H          0x2B  //43
+#define RH2_SEL1_300H          0x02  //2
+#define RH2_SEL1_250H          0x05  //5
+#define RH2_SEL1_200H          0x07  //7
+#define RH2_SEL1_150H          0x08  //8
+#define RH2_SEL1_100H          0x05  //5
+
+#define RH2_SEL2_20K           0x00  //0
+#define RH2_SEL2_15K           0x00  //0
+#define RH2_SEL2_10K           0x00  //0
+#define RH2_SEL2_7_5K          0x00  //0
+#define RH2_SEL2_5K            0x00  //0
+#define RH2_SEL2_3K            0x01  //1
+#define RH2_SEL2_2_5K          0x01  //1
+#define RH2_SEL2_2K            0x01  //1
+#define RH2_SEL2_1_5K          0x02  //2
+#define RH2_SEL2_1K            0x03  //3
+#define RH2_SEL2_750H          0x04  //4
+#define RH2_SEL2_500H          0x06  //6
+#define RH2_SEL2_300H          0x0B  //11
+#define RH2_SEL2_250H          0x0D  //13
+#define RH2_SEL2_200H          0x10  //16
+#define RH2_SEL2_150H          0x15  //21
+#define RH2_SEL2_100H          0x1F  //31
+
+// Cutoff Frequency low
+#define      RL_SEL1_1k           0x0A
+#define      RL_SEL1_500H         0x0D
+#define      RL_SEL1_300H         0x0F
+#define      RL_SEL1_250H         0x11
+#define      RL_SEL1_200H         0x12
+#define      RL_SEL1_150H         0x15
+#define      RL_SEL1_100H         0x19
+#define      RL_SEL1_75H          0x1C
+#define      RL_SEL1_50H          0x22
+#define      RL_SEL1_30H          0x2C
+#define      RL_SEL1_25H          0x30
+#define      RL_SEL1_20H          0x36
+#define      RL_SEL1_15H          0x3E
+#define      RL_SEL1_10H          0x05
+#define      RL_SEL1_7_5H         0x12
+#define      RL_SEL1_5H           0x28
+#define      RL_SEL1_3H           0x14
+#define      RL_SEL1_2_5H         0x2A
+#define      RL_SEL1_2H           0x08
+#define      RL_SEL1_1_5H         0x09
+#define      RL_SEL1_1H           0x2C
+#define      RL_SEL1_0_75H        0x31
+#define      RL_SEL1_0_5H         0x23
+#define      RL_SEL1_0_3H         0x01
+#define      RL_SEL1_0_25H        0x38
+#define      RL_SEL1_0_1H         0x10
+
+#define      RL_SEL2_1k           0x00
+#define      RL_SEL2_500H         0x00
+#define      RL_SEL2_300H         0x00
+#define      RL_SEL2_250H         0x00
+#define      RL_SEL2_200H         0x00
+#define      RL_SEL2_150H         0x00
+#define      RL_SEL2_100H         0x00
+#define      RL_SEL2_75H          0x00
+#define      RL_SEL2_50H          0x00
+#define      RL_SEL2_30H          0x00
+#define      RL_SEL2_25H          0x00
+#define      RL_SEL2_20H          0x00
+#define      RL_SEL2_15H          0x00
+#define      RL_SEL2_10H          0x01
+#define      RL_SEL2_7_5H         0x01
+#define      RL_SEL2_5H           0x01
+#define      RL_SEL2_3H           0x02
+#define      RL_SEL2_2_5H         0x02
+#define      RL_SEL2_2H           0x03
+#define      RL_SEL2_1_5H         0x04
+#define      RL_SEL2_1H           0x06
+#define      RL_SEL2_0_75H        0x09
+#define      RL_SEL2_0_5H         0x11
+#define      RL_SEL2_0_3H         0x28
+#define      RL_SEL2_0_25H        0x36
+#define      RL_SEL2_0_1H         0x3C
+
+#define      RL_SEL3_1k         0x00
+#define      RL_SEL3_500H         0x00
+#define      RL_SEL3_300H         0x00
+#define      RL_SEL3_250H         0x00
+#define      RL_SEL3_200H         0x00
+#define      RL_SEL3_150H         0x00
+#define      RL_SEL3_100H         0x00
+#define      RL_SEL3_75H         0x00
+#define      RL_SEL3_50H         0x00
+#define      RL_SEL3_30H         0x00
+#define      RL_SEL3_25H         0x00
+#define      RL_SEL3_20H         0x00
+#define      RL_SEL3_15H         0x00
+#define      RL_SEL3_10H         0x00
+#define      RL_SEL3_7_5H         0x00
+#define      RL_SEL3_5H         0x00
+#define      RL_SEL3_3H         0x00
+#define      RL_SEL3_2_5H         0x00
+#define      RL_SEL3_2H         0x00
+#define      RL_SEL3_1_5H         0x00
+#define      RL_SEL3_1H         0x00
+#define      RL_SEL3_0_75H         0x00
+#define      RL_SEL3_0_5H         0x00
+#define      RL_SEL3_0_3H         0x00
+#define      RL_SEL3_0_25H         0x00
+#define      RL_SEL3_0_1H         0x01
+
+
 // Stimulation enable
 #define STIM_ENABLE_A_VALUE_H 0xAA
 #define STIM_ENABLE_A_VALUE_L 0xAA

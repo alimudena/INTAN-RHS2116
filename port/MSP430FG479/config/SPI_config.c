@@ -3,10 +3,11 @@
 #include "../IKKI/IKKI_MAC.h"
 
 void SPI_setup(SPI_config_struct* SPI_config) {
+  UCA0CTL0 |= UCSYNC; // Initialyze SPI if not done before
 
   USCI_SPI_pin_setup();
 
-
+  USCI_mode_sel('U');
   SPI_mode_config(SPI_config->Master_Slave);
 
 

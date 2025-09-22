@@ -5,22 +5,45 @@
 #define WRITE_ACTION                    0b10000000
 #define WRITE_ACTION_M                  0b10010000
 #define WRITE_ACTION_U                  0b10100000
+#define WRITE_ACTION_U_M                0b10110000
 
-#define READ_ACTION                     0b10000000
+
+#define READ_ACTION                     0b11000000
 #define READ_ACTION_M                   0b11010000
 #define READ_ACTION_U                   0b11100000
+#define READ_ACTION_U_M                 0b11110000
 
-#define REGISTER_VALUE_TEST             255
+#define CONVERT_ACTION                  0b00000000
+#define CONVERT_ACTION_U                0b00100000
+#define CONVERT_ACTION_M                0b00010000
+#define CONVERT_ACTION_D                0b00001000
+#define CONVERT_ACTION_H                0b00000100
+
+#define CONVERT_ACTION_N                0x3F
+
+
+#define CLEAR_ACTION                    0b01101010
+
+
+#define REGISTER_VALUE_TEST             0b11111111
 
 // Stimulation enable
-#define STIM_ENABLE_A                   0x20 //32
-#define STIM_ENABLE_B                   0x21 //33
+#define STIM_ENABLE_A_reg               0b00100001 //32
+#define STIM_ENABLE_B_reg               0b00100000 //33
+
 
 // Stimulation step size
 #define STIM_STEP_SIZE                  0x22 //34
 
 // Stimulation Bias Voltages
 #define STIM_BIAS_VOLTAGE               0x23 //35
+
+// ADC frequency band
+#define ADC_HIGH_FREQ_4                 0x04//4
+#define ADC_HIGH_FREQ_5                 0x05//5
+
+#define ADC_LOW_FREQ_A                  0x06 //6
+#define ADC_LOW_FREQ_B                  0x07 //6
 
 // Current-Limited Charge Recovery Target Voltage
 #define CURRENT_LIMITED_CHARGE_RECOVERY 0x24 //36

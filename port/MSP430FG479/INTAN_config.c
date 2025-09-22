@@ -4,6 +4,914 @@
 #include "../../common/register_macro.h"
 
 #include <math.h>
+#include <stdbool.h> 
+#include <msp430.h>
+#include <stdio.h>
+#include <stdint.h>  // Necesario para uint16_t
+#include "functions/general_functions.h"
+
+/*
+    Functions for enabling and disabling the booleans described in the INTAN for MSP430
+*/
+
+void enable_M_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->M_flag = 1;
+}
+void enable_U_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->U_flag = 1;
+}
+void enable_H_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->H_flag = 1;
+}
+void enable_D_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->D_flag = 1;
+}
+
+void disable_M_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->M_flag = 0;
+}
+void disable_U_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->U_flag = 0;
+}
+void disable_H_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->H_flag = 0;
+}
+void disable_D_flag(INTAN_config_struct *INTAN_config){
+    INTAN_config->D_flag = 0;
+}
+
+/*
+    Function for initializing INTAN for the MSP430
+*/
+
+void initialize_INTAN(INTAN_config_struct* INTAN_config){
+    disable_M_flag(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_H_flag(INTAN_config);
+    disable_D_flag(INTAN_config);
+
+    INTAN_config->max_size = 0;
+    unsigned i;
+    for (i= MAX_VALUES; i > 0; i--) {
+        INTAN_config->expected_RX[i-1] = 0;
+        INTAN_config->obtained_RX[i-1] = 0;
+        INTAN_config->expected_RX_bool[i-1] = 0;
+
+    }
+    INTAN_config->C2_enabled = false;
+
+    INTAN_config->initial_channel_to_convert = 3;
+
+}
+
+
+// Function used for sending SPI commands
+
+/*While not all the commands have been sent:
+    State 1:
+        Update the packets to be sent in state 2
+    State 2:
+        Send the 4 packets and save the received values in the arrays for checking the values
+
+  When all the commands have been sent:
+    Check that the received values are correct using the function for checking it. 
+    If the returned value of the function is false:
+        enter a while loop and turn on the led for the INTAN configuration warning
+    Else: exit the function
+
+  */  
+void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* packet_1, uint8_t* packet_2, uint8_t* packet_3, uint8_t* packet_4){
+
+    /*
+    Se añade a la lista de envíos dos dummies para que se puedan comprobar todas las recepciones tras los envíos.
+    Si no se hace esto entonces habría que implementar una lógica adicional de traslado de paquetes hacia el inicio de los que se han recibido y 
+    comprobarlo más adelante, aciendo que el fallo venga más tarde de lo deseado y pudiendo producir un error indeseado como una configuración mala.
+    */
+    
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    reg_config_num += 1;
+
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    reg_config_num += 1;
+    
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    reg_config_num += 1;
+ 
+    INTAN_config->max_size = reg_config_num;  
+
+    uint16_t pckt_count = 0;
+    uint8_t rx_packet_1 = 1;
+    uint8_t rx_packet_2 = 2;
+    uint8_t rx_packet_3 = 3;
+    uint8_t rx_packet_4 = 4;
+
+    while(pckt_count != INTAN_config->max_size){       
+            
+            wait_1_second();
+            
+            OFF_CS_pin();
+            __delay_cycles(CLK_5_CYCLES);
+
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = INTAN_config->array1[pckt_count];
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            rx_packet_1=UCA0RXBUF;
+            __delay_cycles(CLK_2_CYCLES);
+
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = INTAN_config->array2[pckt_count];
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            rx_packet_2=UCA0RXBUF;
+            __delay_cycles(CLK_2_CYCLES);
+
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
+            UCA0TXBUF = INTAN_config->array3[pckt_count];
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            rx_packet_3=UCA0RXBUF;
+            __delay_cycles(CLK_2_CYCLES);
+
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
+            UCA0TXBUF = INTAN_config->array4[pckt_count];
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            rx_packet_4=UCA0RXBUF;
+            __delay_cycles(CLK_2_CYCLES);
+
+            __delay_cycles(CLK_10_CYCLES);
+            ON_CS_pin();   
+            
+            __delay_cycles(CLK_5_CYCLES);
+
+            uint32_t rx_value = ((uint32_t)rx_packet_1 << 24) |
+                ((uint32_t)rx_packet_2 << 16) |
+                ((uint32_t)rx_packet_3 << 8)  |
+                ((uint32_t)rx_packet_4);
+            INTAN_config->obtained_RX[pckt_count] = rx_value;
+            pckt_count += 1;
+        
+    }
+    pckt_count = 0;
+    
+    bool checked_rcvd = check_received_commands(INTAN_config);
+    if (!checked_rcvd){
+        // while(1){
+            ON_INTAN_LED();
+        // }
+    }else{
+         OFF_INTAN_LED();
+    }
+    INTAN_config->max_size = 0;
+}
+
+
+// Funtion used to check if the returned values are correct or not
+bool check_received_commands(INTAN_config_struct* INTAN_config){
+    int16_t index;
+    // If the value to be compared actually does not mean anything (as if it a read function) return true
+    for (index = 0; index < INTAN_config->max_size-1; index++){
+        if (INTAN_config->expected_RX_bool[index] == 1) {       
+            if (index+2 >= MAX_VALUES){
+                // Failure because more than the expected values have been sent and there is an index out of bounds.
+                return false;
+            }
+            if (INTAN_config->obtained_RX[index+2] != INTAN_config->expected_RX[index]){
+                INTAN_config->obtained_RX[index+2] = 0;
+                INTAN_config->expected_RX[index] = 0;
+                return false;
+            }
+                INTAN_config->obtained_RX[index+2] = 0;
+                INTAN_config->expected_RX[index] = 0;
+        }
+    }
+
+    return true;
+}
+
+//Function to check if the INTAN is working at all
+void check_intan_SPI_array(INTAN_config_struct* INTAN_config){
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+
+    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    INTAN_config->expected_RX_bool[reg_config_num] = 1;
+    INTAN_config->instruction[reg_config_num] = 'K';
+    reg_config_num += 1;
+
+    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    INTAN_config->expected_RX_bool[reg_config_num] = 1;
+    INTAN_config->instruction[reg_config_num] = 'K';
+    reg_config_num += 1;
+
+    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    INTAN_config->expected_RX_bool[reg_config_num] = 1;
+    INTAN_config->instruction[reg_config_num] = 'K';
+    reg_config_num += 1;
+ 
+    INTAN_config->max_size = reg_config_num;
+}
+
+
+void clear_command(INTAN_config_struct* INTAN_config){
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    // uint8_t obtained_RX_i = INTAN_config->obtained_RX_i;
+    // Comando de limpieza recomendado en la pg 33 para inicializar el ADC para su operación normal
+    INTAN_config->array1[reg_config_num] = CLEAR_ACTION;
+    INTAN_config->array2[reg_config_num] = ZEROS_8;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+
+
+    if (INTAN_config->C2_enabled == false){
+        INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
+    } else{
+        INTAN_config->expected_RX[reg_config_num] = RETURN_CLEAR_2C;
+    }
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
+    INTAN_config->instruction[reg_config_num] = 'L';
+
+
+    reg_config_num += 1;
+ 
+    INTAN_config->max_size = reg_config_num;
+
+}
+
+void write_command(INTAN_config_struct* INTAN_config, uint8_t R, uint16_t D){
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    // Flag U on M off
+    if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == false)){
+        INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+
+    // Flag U off M on
+    } else if ((INTAN_config->U_flag == false)&&(INTAN_config->M_flag == true)) {
+        INTAN_config->array1[reg_config_num] = WRITE_ACTION_M;
+    
+    // Flag U on M on
+    }else if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == true)) {
+        INTAN_config->array1[reg_config_num] = WRITE_ACTION_U_M;
+    
+    // Flag U off M off
+    }else{
+        INTAN_config->array1[reg_config_num] = WRITE_ACTION;
+    }
+
+    INTAN_config->array2[reg_config_num] = R;
+    uint8_t high_byte;
+    uint8_t low_byte;
+
+    split_uint16(D, &high_byte, &low_byte);
+    INTAN_config->array3[reg_config_num] = high_byte;
+    INTAN_config->array4[reg_config_num] = low_byte;
+    uint32_t returned; 
+    returned = unify_16bits(0b1111111111111111, D);
+    INTAN_config->expected_RX[reg_config_num] = returned;
+    INTAN_config->expected_RX_bool[reg_config_num] = 1;
+    INTAN_config->instruction[reg_config_num] = 'W';
+
+    reg_config_num += 1;
+
+    INTAN_config->max_size = reg_config_num;
+
+}
+
+void read_command(INTAN_config_struct* INTAN_config, uint8_t R){
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    // Flag U on M off
+    if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == false)){
+        INTAN_config->array1[reg_config_num] = READ_ACTION_U;
+
+    // Flag U off M on
+    } else if ((INTAN_config->U_flag == false)&&(INTAN_config->M_flag == true)) {
+        INTAN_config->array1[reg_config_num] = READ_ACTION_M;
+    
+    // Flag U on M on
+    }else if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == true)) {
+        INTAN_config->array1[reg_config_num] = READ_ACTION_U_M;
+    
+    // Flag U off M off
+    }else{
+        INTAN_config->array1[reg_config_num] = READ_ACTION;
+    }
+
+    INTAN_config->array2[reg_config_num] = R;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+
+    INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
+    INTAN_config->instruction[reg_config_num] = 'R';
+
+    reg_config_num += 1;
+
+    INTAN_config->max_size = reg_config_num;
+}
+
+
+
+void fc_high(INTAN_config_struct* INTAN_config, char H_k, float_t freq){
+    uint8_t RH1_sel1;
+    uint8_t RH1_sel2;
+    uint8_t RH2_sel1;
+    uint8_t RH2_sel2;
+
+    uint16_t RH1;
+    uint16_t RH2;
+
+    switch (H_k) {
+        case 'k':
+             if (freq == 20.0f){
+                    RH1_sel1 = RH1_SEL1_20K;
+                    RH1_sel2 = RH1_SEL2_20K;
+                    RH2_sel1 = RH2_SEL1_20K;
+                    RH2_sel2 = RH2_SEL2_20K;
+                    }
+              else if (freq == 15.0f){
+                    RH1_sel1 = RH1_SEL1_15K;
+                    RH1_sel2 = RH1_SEL2_15K;
+                    RH2_sel1 = RH2_SEL1_15K;
+                    RH2_sel2 = RH2_SEL2_15K;
+                    }
+              else if (freq == 10.0f){
+                    RH1_sel1 = RH1_SEL1_10K;
+                    RH1_sel2 = RH1_SEL2_10K;
+                    RH2_sel1 = RH2_SEL1_10K;
+                    RH2_sel2 = RH2_SEL2_10K;
+                    }
+              else if (freq == 7.5f){
+                    RH1_sel1 = RH1_SEL1_7_5K;
+                    RH1_sel2 = RH1_SEL2_7_5K;
+                    RH2_sel1 = RH2_SEL1_7_5K;
+                    RH2_sel2 = RH2_SEL2_7_5K;
+                    }
+              else if (freq == 5.0f){
+                    RH1_sel1 = RH1_SEL1_5K;
+                    RH1_sel2 = RH1_SEL2_5K;
+                    RH2_sel1 = RH2_SEL1_5K;
+                    RH2_sel2 = RH2_SEL2_5K;
+                    }
+              else if (freq == 3.0f){
+                    RH1_sel1 = RH1_SEL1_3K;
+                    RH1_sel2 = RH1_SEL2_3K;
+                    RH2_sel1 = RH2_SEL1_3K;
+                    RH2_sel2 = RH2_SEL2_3K;
+                    }
+              else if (freq == 2.5f){
+                    RH1_sel1 = RH1_SEL1_2_5K;
+                    RH1_sel2 = RH1_SEL2_2_5K;
+                    RH2_sel1 = RH2_SEL1_2_5K;
+                    RH2_sel2 = RH2_SEL2_2_5K;
+                    }
+              else if (freq == 2.0f){
+                    RH1_sel1 = RH1_SEL1_2K;
+                    RH1_sel2 = RH1_SEL2_2K;
+                    RH2_sel1 = RH2_SEL1_2K;
+                    RH2_sel2 = RH2_SEL2_2K;
+                    }
+              else if (freq == 1.5f){
+                    RH1_sel1 = RH1_SEL1_1_5K;
+                    RH1_sel2 = RH1_SEL2_1_5K;
+                    RH2_sel1 = RH2_SEL1_1_5K;
+                    RH2_sel2 = RH2_SEL2_1_5K;
+                    }
+              else if (freq == 1.0f){
+                    RH1_sel1 = RH1_SEL1_1K;
+                    RH1_sel2 = RH1_SEL2_1K;
+                    RH2_sel1 = RH2_SEL1_1K;
+                    RH2_sel2 = RH2_SEL2_1K;
+                }
+                
+               else{     
+                    perror("Error: high cutoff frequency Kilo.");
+                        
+               }
+            break;
+
+        case 'H':
+                if (freq == 750){
+                    RH1_sel1 = RH1_SEL1_750H;
+                    RH1_sel2 = RH1_SEL2_750H;
+                    RH2_sel1 = RH2_SEL1_750H;
+                    RH2_sel2 = RH2_SEL2_750H;
+                    }
+                else if (freq == 500){
+                    RH1_sel1 = RH1_SEL1_500H;
+                    RH1_sel2 = RH1_SEL2_500H;
+                    RH2_sel1 = RH2_SEL1_500H;
+                    RH2_sel2 = RH2_SEL2_500H;
+                    }
+                else if (freq == 300){
+                    RH1_sel1 = RH1_SEL1_300H;
+                    RH1_sel2 = RH1_SEL2_300H;
+                    RH2_sel1 = RH2_SEL1_300H;
+                    RH2_sel2 = RH2_SEL2_300H;
+                    }
+                else if (freq == 250){
+                    RH1_sel1 = RH1_SEL1_250H;
+                    RH1_sel2 = RH1_SEL2_250H;
+                    RH2_sel1 = RH2_SEL1_250H;
+                    RH2_sel2 = RH2_SEL2_250H;
+                    }
+                else if (freq == 200){
+                    RH1_sel1 = RH1_SEL1_200H;
+                    RH1_sel2 = RH1_SEL2_200H;
+                    RH2_sel1 = RH2_SEL1_200H;
+                    RH2_sel2 = RH2_SEL2_200H;
+                    }
+                else if (freq == 150){
+                    RH1_sel1 = RH1_SEL1_150H;
+                    RH1_sel2 = RH1_SEL2_150H;
+                    RH2_sel1 = RH2_SEL1_150H;
+                    RH2_sel2 = RH2_SEL2_150H;
+                    }
+                else if (freq == 100){
+                    RH1_sel1 = RH1_SEL1_100H;
+                    RH1_sel2 = RH1_SEL2_100H;
+                    RH2_sel1 = RH2_SEL1_100H;
+                    RH2_sel2 = RH2_SEL2_100H;}
+                else{
+                    perror("Error: high cutoff frequency H.");
+                    }    
+            break;
+        default:
+            perror("Error: high cutoff frequency units.");
+            break;    
+    }
+    RH1 = ((uint16_t)RH1_sel2 << 6) | RH1_sel1;
+    RH2 = ((uint16_t)RH2_sel2 << 6) | RH2_sel1;
+
+    // RH1 = unify_8bits(RH1_sel2, RH1_sel1);   
+    // RH2 = unify_8bits(RH2_sel2, RH2_sel1);
+
+    // Calls write command with the corresponding registers and frequency values
+    write_command(INTAN_config, (uint8_t)ADC_HIGH_FREQ_4, RH1);
+    write_command(INTAN_config, (uint8_t)ADC_HIGH_FREQ_5, RH2);
+
+}
+
+void fc_low_A(INTAN_config_struct* INTAN_config, float_t freq){
+    uint8_t RL_SEL1;
+    uint8_t RL_SEL2;
+    uint8_t RL_SEL3;
+
+    uint16_t RL;
+    if (freq == 1000.0f){
+        RL_SEL1 = RL_SEL1_1k;
+        RL_SEL2 = RL_SEL2_1k;
+        RL_SEL3 = RL_SEL3_1k;
+
+    }else if(freq == 500.0f){
+        RL_SEL1 = RL_SEL1_500H;
+        RL_SEL2 = RL_SEL2_500H;
+        RL_SEL3 = RL_SEL3_500H;
+
+    }else if(freq == 300.0f){
+        RL_SEL1 = RL_SEL1_300H;
+        RL_SEL2 = RL_SEL2_300H;
+        RL_SEL3 = RL_SEL3_300H;
+        
+    }else if(freq == 250.0f){
+        RL_SEL1 = RL_SEL1_250H;
+        RL_SEL2 = RL_SEL2_250H;
+        RL_SEL3 = RL_SEL3_250H;
+        
+    }else if(freq == 200.0f){
+        RL_SEL1 = RL_SEL1_200H;
+        RL_SEL2 = RL_SEL2_200H;
+        RL_SEL3 = RL_SEL3_200H;
+        
+    }else if(freq == 150.0f){
+        RL_SEL1 = RL_SEL1_150H;
+        RL_SEL2 = RL_SEL2_150H;
+        RL_SEL3 = RL_SEL3_150H;
+        
+    }else if(freq == 100.0f){
+        RL_SEL1 = RL_SEL1_100H;
+        RL_SEL2 = RL_SEL2_100H;
+        RL_SEL3 = RL_SEL3_100H;
+        
+    }else if(freq == 75.0f){
+        RL_SEL1 = RL_SEL1_75H;
+        RL_SEL2 = RL_SEL2_75H;
+        RL_SEL3 = RL_SEL3_75H;
+        
+    }else if(freq == 50.0f){
+        RL_SEL1 = RL_SEL1_50H;
+        RL_SEL2 = RL_SEL2_50H;
+        RL_SEL3 = RL_SEL3_50H;
+        
+    }else if(freq == 30.0f){
+        RL_SEL1 = RL_SEL1_30H;
+        RL_SEL2 = RL_SEL2_30H;
+        RL_SEL3 = RL_SEL3_30H;
+        
+    }else if(freq == 25.0f){
+        RL_SEL1 = RL_SEL1_25H;
+        RL_SEL2 = RL_SEL2_25H;
+        RL_SEL3 = RL_SEL3_25H;
+        
+    }else if(freq == 20.0f){
+        RL_SEL1 = RL_SEL1_20H;
+        RL_SEL2 = RL_SEL2_20H;
+        RL_SEL3 = RL_SEL3_20H;
+        
+    }else if(freq == 15.0f){
+        RL_SEL1 = RL_SEL1_15H;
+        RL_SEL2 = RL_SEL2_15H;
+        RL_SEL3 = RL_SEL3_15H;
+        
+    }else if(freq == 10.0f){
+        RL_SEL1 = RL_SEL1_10H;
+        RL_SEL2 = RL_SEL2_10H;
+        RL_SEL3 = RL_SEL3_10H;
+        
+    }else if(freq == 7.5f){
+        RL_SEL1 = RL_SEL1_7_5H;
+        RL_SEL2 = RL_SEL2_7_5H;
+        RL_SEL3 = RL_SEL3_7_5H;
+        
+    }else if(freq == 5.0f){
+        RL_SEL1 = RL_SEL1_5H;
+        RL_SEL2 = RL_SEL2_5H;
+        RL_SEL3 = RL_SEL3_5H;
+        
+    }else if(freq == 3.0f){
+        RL_SEL1 = RL_SEL1_3H;
+        RL_SEL2 = RL_SEL2_3H;
+        RL_SEL3 = RL_SEL3_3H;
+        
+    }else if(freq == 2.5f){
+        RL_SEL1 = RL_SEL1_2_5H;
+        RL_SEL2 = RL_SEL2_2_5H;
+        RL_SEL3 = RL_SEL3_2_5H;
+        
+    }else if(freq == 2.0f){
+        RL_SEL1 = RL_SEL1_2H;
+        RL_SEL2 = RL_SEL2_2H;
+        RL_SEL3 = RL_SEL3_2H;
+        
+    }else if(freq == 1.5f){
+        RL_SEL1 = RL_SEL1_1_5H;
+        RL_SEL2 = RL_SEL2_1_5H;
+        RL_SEL3 = RL_SEL3_1_5H;
+        
+    }else if(freq == 1.0f){
+        RL_SEL1 = RL_SEL1_1H;
+        RL_SEL2 = RL_SEL2_1H;
+        RL_SEL3 = RL_SEL3_1H;
+        
+    }else if(freq == 0.75f){
+        RL_SEL1 = RL_SEL1_0_75H;
+        RL_SEL2 = RL_SEL2_0_75H;
+        RL_SEL3 = RL_SEL3_0_75H;
+        
+    }else if(freq == 0.5f){
+        RL_SEL1 = RL_SEL1_0_5H;
+        RL_SEL2 = RL_SEL2_0_5H;
+        RL_SEL3 = RL_SEL3_0_5H;
+        
+    }else if(freq == 0.3f){
+        RL_SEL1 = RL_SEL1_0_3H;
+        RL_SEL2 = RL_SEL2_0_3H;
+        RL_SEL3 = RL_SEL3_0_3H;
+        
+    }else if(freq == 0.25f){
+        RL_SEL1 = RL_SEL1_0_25H;
+        RL_SEL2 = RL_SEL2_0_25H;
+        RL_SEL3 = RL_SEL3_0_25H;
+        
+    }else if(freq == 0.1f){
+        RL_SEL1 = RL_SEL1_0_1H;
+        RL_SEL2 = RL_SEL2_0_1H;
+        RL_SEL3 = RL_SEL3_0_1H;
+        
+    }else{
+        perror("Error: high cutoff frequency Kilo.");
+    }
+    RL = ((uint16_t)RL_SEL3 << 13) |((uint16_t)RL_SEL2 << 7) | RL_SEL1;
+    write_command(INTAN_config, (uint8_t)ADC_LOW_FREQ_A, RL);
+
+}
+
+void fc_low_B(INTAN_config_struct* INTAN_config, float freq){
+    uint8_t RL_SEL1;
+    uint8_t RL_SEL2;
+    uint8_t RL_SEL3;
+
+    uint16_t RL;
+    if (freq == 1000.0f){
+        RL_SEL1 = RL_SEL1_1k;
+        RL_SEL2 = RL_SEL2_1k;
+        RL_SEL3 = RL_SEL3_1k;
+
+    }else if(freq == 500.0f){
+        RL_SEL1 = RL_SEL1_500H;
+        RL_SEL2 = RL_SEL2_500H;
+        RL_SEL3 = RL_SEL3_500H;
+
+    }else if(freq == 300.0f){
+        RL_SEL1 = RL_SEL1_300H;
+        RL_SEL2 = RL_SEL2_300H;
+        RL_SEL3 = RL_SEL3_300H;
+        
+    }else if(freq == 250.0f){
+        RL_SEL1 = RL_SEL1_250H;
+        RL_SEL2 = RL_SEL2_250H;
+        RL_SEL3 = RL_SEL3_250H;
+        
+    }else if(freq == 200.0f){
+        RL_SEL1 = RL_SEL1_200H;
+        RL_SEL2 = RL_SEL2_200H;
+        RL_SEL3 = RL_SEL3_200H;
+        
+    }else if(freq == 150.0f){
+        RL_SEL1 = RL_SEL1_150H;
+        RL_SEL2 = RL_SEL2_150H;
+        RL_SEL3 = RL_SEL3_150H;
+        
+    }else if(freq == 100.0f){
+        RL_SEL1 = RL_SEL1_100H;
+        RL_SEL2 = RL_SEL2_100H;
+        RL_SEL3 = RL_SEL3_100H;
+        
+    }else if(freq == 75.0f){
+        RL_SEL1 = RL_SEL1_75H;
+        RL_SEL2 = RL_SEL2_75H;
+        RL_SEL3 = RL_SEL3_75H;
+        
+    }else if(freq == 50.0f){
+        RL_SEL1 = RL_SEL1_50H;
+        RL_SEL2 = RL_SEL2_50H;
+        RL_SEL3 = RL_SEL3_50H;
+        
+    }else if(freq == 30.0f){
+        RL_SEL1 = RL_SEL1_30H;
+        RL_SEL2 = RL_SEL2_30H;
+        RL_SEL3 = RL_SEL3_30H;
+        
+    }else if(freq == 25.0f){
+        RL_SEL1 = RL_SEL1_25H;
+        RL_SEL2 = RL_SEL2_25H;
+        RL_SEL3 = RL_SEL3_25H;
+        
+    }else if(freq == 20.0f){
+        RL_SEL1 = RL_SEL1_20H;
+        RL_SEL2 = RL_SEL2_20H;
+        RL_SEL3 = RL_SEL3_20H;
+        
+    }else if(freq == 15.0f){
+        RL_SEL1 = RL_SEL1_15H;
+        RL_SEL2 = RL_SEL2_15H;
+        RL_SEL3 = RL_SEL3_15H;
+        
+    }else if(freq == 10.0f){
+        RL_SEL1 = RL_SEL1_10H;
+        RL_SEL2 = RL_SEL2_10H;
+        RL_SEL3 = RL_SEL3_10H;
+        
+    }else if(freq == 7.5f){
+        RL_SEL1 = RL_SEL1_7_5H;
+        RL_SEL2 = RL_SEL2_7_5H;
+        RL_SEL3 = RL_SEL3_7_5H;
+        
+    }else if(freq == 5.0f){
+        RL_SEL1 = RL_SEL1_5H;
+        RL_SEL2 = RL_SEL2_5H;
+        RL_SEL3 = RL_SEL3_5H;
+        
+    }else if(freq == 3.0f){
+        RL_SEL1 = RL_SEL1_3H;
+        RL_SEL2 = RL_SEL2_3H;
+        RL_SEL3 = RL_SEL3_3H;
+        
+    }else if(freq == 2.5f){
+        RL_SEL1 = RL_SEL1_2_5H;
+        RL_SEL2 = RL_SEL2_2_5H;
+        RL_SEL3 = RL_SEL3_2_5H;
+        
+    }else if(freq == 2.0f){
+        RL_SEL1 = RL_SEL1_2H;
+        RL_SEL2 = RL_SEL2_2H;
+        RL_SEL3 = RL_SEL3_2H;
+        
+    }else if(freq == 1.5f){
+        RL_SEL1 = RL_SEL1_1_5H;
+        RL_SEL2 = RL_SEL2_1_5H;
+        RL_SEL3 = RL_SEL3_1_5H;
+        
+    }else if(freq == 1.0f){
+        RL_SEL1 = RL_SEL1_1H;
+        RL_SEL2 = RL_SEL2_1H;
+        RL_SEL3 = RL_SEL3_1H;
+        
+    }else if(freq == 0.75f){
+        RL_SEL1 = RL_SEL1_0_75H;
+        RL_SEL2 = RL_SEL2_0_75H;
+        RL_SEL3 = RL_SEL3_0_75H;
+        
+    }else if(freq == 0.5f){
+        RL_SEL1 = RL_SEL1_0_5H;
+        RL_SEL2 = RL_SEL2_0_5H;
+        RL_SEL3 = RL_SEL3_0_5H;
+        
+    }else if(freq == 0.3f){
+        RL_SEL1 = RL_SEL1_0_3H;
+        RL_SEL2 = RL_SEL2_0_3H;
+        RL_SEL3 = RL_SEL3_0_3H;
+        
+    }else if(freq == 0.25f){
+        RL_SEL1 = RL_SEL1_0_25H;
+        RL_SEL2 = RL_SEL2_0_25H;
+        RL_SEL3 = RL_SEL3_0_25H;
+        
+    }else if(freq == 0.1f){
+        RL_SEL1 = RL_SEL1_0_1H;
+        RL_SEL2 = RL_SEL2_0_1H;
+        RL_SEL3 = RL_SEL3_0_1H;
+        
+    }else{
+        perror("Error: high cutoff frequency Kilo.");
+    }
+    RL = ((uint16_t)RL_SEL3 << 13) |((uint16_t)RL_SEL2 << 7) | RL_SEL1;
+    write_command(INTAN_config, (uint8_t)ADC_LOW_FREQ_B, RL);
+
+}
+
+void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel){
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    volatile uint8_t saved_value;
+    if (Channel >= 16){
+        perror("Error: Too high Channel value.");
+        while(1);
+    }
+    // No flags
+    INTAN_config->array1[reg_config_num] = CONVERT_ACTION;
+    
+    // U flag
+    if (INTAN_config->U_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_U; 
+    } 
+    
+    // M flag
+    if (INTAN_config->M_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_M; 
+    } 
+    
+    // D flag 
+    if (INTAN_config->D_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_D; 
+    } 
+
+    // H flag
+    if (INTAN_config->H_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_H; 
+    } 
+
+    INTAN_config->array2[reg_config_num] = Channel;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
+    INTAN_config->instruction[reg_config_num] = 'O';
+
+
+    reg_config_num += 1;
+ 
+    INTAN_config->max_size = reg_config_num;
+
+
+}
+
+void convert_N_channels(INTAN_config_struct* INTAN_config, uint8_t number_channels){
+    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    volatile uint8_t saved_value; 
+    volatile uint8_t Channel;
+    uint8_t i;
+    INTAN_config->max_size = reg_config_num;
+    
+    // Convert the first channel and then convert the N following channels
+    Channel = INTAN_config->initial_channel_to_convert;
+    if (Channel >= 16){
+        perror("Error: Too high Channel value.");
+        while(1);
+    }
+
+    // No flags
+    INTAN_config->array1[reg_config_num] = CONVERT_ACTION;
+    
+    // U flag
+    if (INTAN_config->U_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_U; 
+    } 
+    
+    // M flag
+    if (INTAN_config->M_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_M; 
+    } 
+    
+    // D flag 
+    if (INTAN_config->D_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_D; 
+    } 
+
+    // H flag
+    if (INTAN_config->H_flag == true){
+        saved_value = INTAN_config->array1[reg_config_num];
+        INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_H; 
+    } 
+
+    INTAN_config->array2[reg_config_num] = Channel;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
+    INTAN_config->instruction[reg_config_num] = 'O';
+
+
+    reg_config_num += 1;
+
+    for (i = number_channels; i>0; i--){
+        // No flags
+        INTAN_config->array1[reg_config_num] = CONVERT_ACTION;
+        
+        // U flag
+        if (INTAN_config->U_flag == true){
+            saved_value = INTAN_config->array1[reg_config_num];
+            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_U; 
+        } 
+        
+        // M flag
+        if (INTAN_config->M_flag == true){
+            saved_value = INTAN_config->array1[reg_config_num];
+            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_M; 
+        } 
+        
+        // D flag 
+        if (INTAN_config->D_flag == true){
+            saved_value = INTAN_config->array1[reg_config_num];
+            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_D; 
+        } 
+
+        // H flag
+        if (INTAN_config->H_flag == true){
+            saved_value = INTAN_config->array1[reg_config_num];
+            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_H; 
+        } 
+
+        INTAN_config->array2[reg_config_num] = CONVERT_ACTION_N;
+        INTAN_config->array3[reg_config_num] = ZEROS_8;
+        INTAN_config->array4[reg_config_num] = ZEROS_8;
+
+        INTAN_config->expected_RX_bool[reg_config_num] = 0;
+        INTAN_config->instruction[reg_config_num] = 'O';
+
+
+        reg_config_num += 1;
+    }
+    INTAN_config->max_size = reg_config_num;
+}
+
+uint16_t unify_8bits(uint8_t high, uint8_t low) {
+    return ((uint16_t)high << 8) | low;
+}
+
+
+uint32_t unify_16bits(uint16_t high, uint16_t low) {
+    return ((uint32_t)high << 16) | low;
+}
+
 
 // Step selection values as lookup tables
 typedef struct {
@@ -146,6 +1054,7 @@ uint8_t calculate_stim_current(INTAN_config_struct* INTAN_config, uint16_t I_tar
     return magnitude;
 }
 
+
 void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
     uint8_t step_H;
     uint8_t step_L;
@@ -164,6 +1073,13 @@ void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
 
 
     uint16_t reg_config_num = 0;
+
+    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
+    INTAN_config->array1[reg_config_num] = READ_ACTION;
+    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
+    INTAN_config->array3[reg_config_num] = ZEROS_8;
+    INTAN_config->array4[reg_config_num] = ZEROS_8;
+    reg_config_num++;
     
     // Testing -- it will be deleted
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
@@ -174,14 +1090,14 @@ void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
     
     //REGISTER 32: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A_reg;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     reg_config_num++;
 
     //REGISTER 33: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B_reg;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     reg_config_num++;
@@ -324,6 +1240,8 @@ void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
     INTAN_config->array4[reg_config_num] = positive_current;
     reg_config_num++;
 
+    INTAN_config->max_size = reg_config_num;
+
 }
 
 
@@ -357,19 +1275,19 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
     //2.  Asegurar que la estimulación está deshabilitada
     //REGISTER 32: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A_reg;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     reg_config_num++;
 
     //REGISTER 33: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B_reg;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     reg_config_num++;
 
-    //3.  Encender todos los amplificadores de baja ganancia con acoplamiento DC para evitar un consumo excesivo de energía a casua de un error de HW
+    //3.  Encender todos los amplificadores de baja ganancia con acoplamiento DC para evitar un consumo excesivo de energía a causa de un error de HW
     // Si está a cero, se consumen 30.9mA adicionales de VDD
     //REGISTER 38: Individual DC Amplifier Power
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
@@ -424,44 +1342,232 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
     //REGITER 44: Stimulator Polarity (TRIGGERED REGISTER) - stimulation positive in 3 different registers
     INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
     INTAN_config->array2[reg_config_num] = STIM_POLARITY;
-    INTAN_config->array3[reg_config_num] = CH_ON_selected_L;
-    INTAN_config->array4[reg_config_num] = CH_ON_selected_H;
+    INTAN_config->array3[reg_config_num] = CH_ON_selected_H;
+    INTAN_config->array4[reg_config_num] = CH_ON_selected_L;
     reg_config_num++;
 
     //10. Abre todos los interruptores de recuperación de carga (46)
     //REGISTER 46: Charge Recovery Switch (TRIGGERED REGISTER) - activated in 3 different registers
     INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
     INTAN_config->array2[reg_config_num] = CHRG_RECOV_SWITCH;
-    INTAN_config->array3[reg_config_num] = CH_ON_selected_L;
-    INTAN_config->array4[reg_config_num] = CH_ON_selected_H;
+    INTAN_config->array3[reg_config_num] = CH_ON_selected_H;
+    INTAN_config->array4[reg_config_num] = CH_ON_selected_L;
     reg_config_num++;
 
     //11. Abre todos los interruptores de recuperación de carga limitada en corriente (48)
     //REGISTER 48: Current-Limited Charge Recovery Enable (TRIGGERED REGISTER) - activated in 3 different registers
     INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
     INTAN_config->array2[reg_config_num] = CURR_LIM_CHRG_RECOV_EN;
-    INTAN_config->array3[reg_config_num] = CH_ON_selected_L;
-    INTAN_config->array4[reg_config_num] = CH_ON_selected_H;
+    INTAN_config->array3[reg_config_num] = CH_ON_selected_H;
+    INTAN_config->array4[reg_config_num] = CH_ON_selected_L;
     reg_config_num++;
 
     //12. Establece las corrientes negativas de estimulacion en cero centrando los ajustes de corriente (64...)
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH0_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
     
-    
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH1_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH2_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH3_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH4_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH5_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH6_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH7_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH8_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH9_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH10_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH11_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH12_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH13_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH14_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH15_NEG_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
     //13. Establece las corrientes positivas de estimulacion en cero centrando los ajustes de corriente (96...)
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH0_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
     
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH1_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH2_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH3_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH4_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH5_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH6_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH7_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH8_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH9_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH10_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH11_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH12_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH13_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH14_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
+
+    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
+    INTAN_config->array2[reg_config_num] = CH15_POS_CURR_MAG;
+    INTAN_config->array3[reg_config_num] = 0x80;
+    INTAN_config->array4[reg_config_num] = 0x00;
+    reg_config_num++;
     
     
     //14. Habilitar la estimulacion de los estimuladores (32, 33)
     //REGISTER 32: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A_reg;
     INTAN_config->array3[reg_config_num] = STIM_ENABLE_A_VALUE_H;
     INTAN_config->array4[reg_config_num] = STIM_ENABLE_A_VALUE_L;
     reg_config_num++;
 
     //REGISTER 33: Enable - disable stimulation
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B;
+    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B_reg;
     INTAN_config->array3[reg_config_num] = STIM_ENABLE_B_VALUE_H;
     INTAN_config->array4[reg_config_num] = STIM_ENABLE_B_VALUE_L;
     reg_config_num++;
@@ -478,21 +1584,17 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
 }
 
 
-void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4, INTAN_config_struct INTAN_config) {
+void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4, INTAN_config_struct* INTAN_config) {
     
-    //Check that the index is within bounds
-
-    if (pckt_count >= INTAN_config.max_size) {
-        // If index is out of bounds, return 0s or error defaults
-        *val1 = *val2 = *val3 = *val4 = 0;
-        return;
-    }
-
     // Retrieve values from each array at the given index
-    *val1 = INTAN_config.array1[pckt_count];
-    *val2 = INTAN_config.array2[pckt_count];
-    *val3 = INTAN_config.array3[pckt_count];
-    *val4 = INTAN_config.array4[pckt_count];
+    *val1 = INTAN_config->array1[pckt_count];
+    *val2 = INTAN_config->array2[pckt_count];
+    *val3 = INTAN_config->array3[pckt_count];
+    *val4 = INTAN_config->array4[pckt_count];
+}
+
+void wait_5_CYCLES(){
+    __delay_cycles(CLK_5_CYCLES);
 }
 
 void wait_30_seconds(){
@@ -501,6 +1603,10 @@ void wait_30_seconds(){
 
 void wait_5_mins(){
     __delay_cycles(CLK_5_M_CYCLES);
+}
+
+void wait_1_second(){
+    __delay_cycles(CLK_1_S_CYCLES);
 }
 
 void wait_3_seconds(){

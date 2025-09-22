@@ -3,6 +3,9 @@
 #include "../functions/system_config.h"
 
 void setup_UART(UART_config_struct UART_config){
+
+    //Clear in case SPI has been used:
+    UCA0CTL0 &= ~(UCSYNC);
     //******************************************************************************
     // UART Initialization *********************************************************
     //******************************************************************************
@@ -50,7 +53,7 @@ void setup_UART(UART_config_struct UART_config){
                                                     230400    230400    230400    230400
                                                               460800    460800    460800
     */ 
-    UART_config.baudrate = 230400;
+    UART_config.baudrate = 460800;
     UART_baudrate_generation(UART_config.BRCLK_freq, UART_config.baudrate);
     USCI_init();                     // **Initialize USCI state machine**
 

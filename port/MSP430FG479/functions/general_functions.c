@@ -23,6 +23,7 @@ void toggle_setup(){
     P4DIR |= BIT6;                            // Set P4.6 to output direction
 }
 
+
 void toggle_pin(){
     P4OUT ^= 0x40;                          // Toggle P4.6 using exclusive-OR
     
@@ -36,7 +37,21 @@ void ON_pin(){                               // On
     P4OUT |= 0x40;
 }
 
+//*****************************************************************************
+/*error LED for INTAN*/
+//*****************************************************************************
 
+void INTAN_LED_setup(){
+    P4DIR |= BIT3;                            // Set P4.3 to output direction
+}
+
+void OFF_INTAN_LED(){
+    P4OUT &= ~0x08;                          // Off   
+}
+
+void ON_INTAN_LED(){                               // On 
+    P4OUT |= 0x08;
+}
 
 //*****************************************************************************
 /*CS for INTAN*/
@@ -71,3 +86,15 @@ void stim_en_OFF(){
     P4OUT &= ~0x20;                          // Off   
 }
 
+
+//*****************************************************************************
+/*button_pressed for external ineraction*/
+//*****************************************************************************
+void button_init(){
+    P1DIR &= ~BIT0;                             // P1.0 as input
+}
+
+
+bool button_pressed(){
+    return !(P1IN & BIT0);
+}

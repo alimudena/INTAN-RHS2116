@@ -7,6 +7,17 @@
 //                |   14        P4.4|--> CS for INTAN
 //                |   13        P4.5|--> stim_en for INTAN
 //                |   12        P4.6|--> LED
+//                |   15        P4.3|--> LED for INTAN bug
+//                |                 |
+//                |                 |               VCC (3.3V)     
+//                |                 |                   |    
+//                |                 |                   / (resistencia externa de pull-up, 10kΩ)    
+//                |                 |                   |    
+//                |   58        P1.0|--> Botón         P1.0
+//                |                 |                   |    
+//                |                 |               [ BOTÓN ]
+//                |                 |                   |    
+//                |                 |                  GND
 //                |                 |
 //                |  ---  CLK  ---  |
 //                |                 |
@@ -85,6 +96,8 @@ State machine for INTAN configuration: working with polling
 
 
 #include "../../../common/INTAN_config.h"
+#include "../../../common/register_macro.h"
+
 
 
 int state = 1;
@@ -93,21 +106,23 @@ volatile uint8_t low_word = 0xFF;
 bool high_or_low = true;
 int i;
 uint16_t my_register = 0;
-uint16_t pckt_count;
-uint8_t packet_1 = 1;
-uint8_t packet_2 = 2;
-uint8_t packet_3 = 3;
-uint8_t packet_4 = 4;
+
 
 
 #define UART_USAGE    false //True: UART, False: SPI
 #define TEST_CLK      false
 #define SENSE_OR_STIM 3 //1: SENSE interruptions 2: SENSE while 3:STIM 
 #if (SENSE_OR_STIM != 3)
-  #define ECG_or_EEG 1    //1: ECG experiment 2: EEG experiment 3: ECG + BAT 4: EEG + BAT
+  #define ECG_or_EEG 1    //1: ECG experiment 2: EEG experiment 3: ECG + BAT 4: EEG + BAT 5: All channels
   #define SD16_USAGE true
 #elif(SENSE_OR_STIM ==3)
-  uint8_t num_stim = 5;
+  uint8_t num_stim = NUM_STIM_EXP;
+
+  uint8_t packet_1 = 1;
+  uint8_t packet_2 = 2;
+  uint8_t packet_3 = 3;
+  uint8_t packet_4 = 4;
+
 #endif
 
 CLK_config_struct CLK_config;
@@ -153,11 +168,25 @@ void config_SD16A(SD16A_config_struct* SD16A_configuration){
       SD16A_configuration->analog_input[2] = EEG1; // 3: A3 - EEG1
       SD16A_configuration->analog_input[3] = BATT; // 4: A4 - BATT
 
-      SD16A_configuration->analog_input_ID[0] = 0x30; // 2: A2 - EEG2
-      SD16A_configuration->analog_input_ID[1] = 0x31; // 1: A1 - EEG3
+      SD16A_configuration->analog_input_ID[0] = 0x30; // 1: A1 - EEG3
+      SD16A_configuration->analog_input_ID[1] = 0x31; // 2: A2 - EEG2
       SD16A_configuration->analog_input_ID[2] = 0x32; // 3: A3 - EEG1
       SD16A_configuration->analog_input_ID[3] = 0x33; // 4: A4 - BATT
 
+#elif (ECG_or_EEG==5)
+      SD16A_configuration->analog_input_count = 5;
+
+      SD16A_configuration->analog_input[0] = ECG;  // 0: A0 - ECG
+      SD16A_configuration->analog_input[1] = EEG3; // 2: A2 - EEG2
+      SD16A_configuration->analog_input[2] = EEG2; // 1: A1 - EEG3
+      SD16A_configuration->analog_input[3] = EEG1; // 3: A3 - EEG1
+      SD16A_configuration->analog_input[4] = BATT; // 4: A4 - BATT
+
+      SD16A_configuration->analog_input_ID[0] = 0x30; // 0: A0 - ECG
+      SD16A_configuration->analog_input_ID[1] = 0x31; // 2: A2 - EEG2
+      SD16A_configuration->analog_input_ID[2] = 0x32; // 1: A1 - EEG3
+      SD16A_configuration->analog_input_ID[3] = 0x33; // 3: A3 - EEG1
+      SD16A_configuration->analog_input_ID[4] = 0x34; // 4: A4 - BATT
 #endif
 
       // -- Tensión de referencia
@@ -176,7 +205,7 @@ void config_SD16A(SD16A_config_struct* SD16A_configuration){
       // -- Método de conversión
       SD16A_configuration->conv_mode = 'C'; // C: Continuous  S: Single
                                           // -- Tipo de datos
-      SD16A_configuration->polarity = 'U';  // B : Bipolar, U : unipolar
+      SD16A_configuration->polarity = 'B';  // B : Bipolar, U : unipolar
       SD16A_configuration->sign = 'O';      // O : Offset, C : 2's complement
 
       SD16A_configuration->sampled = false;
@@ -187,7 +216,7 @@ void config_SPI(SPI_config_struct* SPI_config){
   SPI_config->inactive_state = 'H';     // clock polarity inactive high
   //data cHanged on the first UCLK edge and captured on the following edge
   //data cAptured on the first UCLK edge and changed on the following edge
-  SPI_config->data_on_clock_edge = 'A'; // data cAptured on the first UCLK edge and changed on the following edge
+  SPI_config->data_on_clock_edge = 'H'; // data cAptured on the first UCLK edge and changed on the following edge
   SPI_config->SPI_length = 8;
   SPI_config->first_Byte_sent = 'M';
     /*clk_ref:
@@ -200,6 +229,66 @@ void config_SPI(SPI_config_struct* SPI_config){
   SPI_config->enable_USCI_interr_rx = false;
   SPI_config->enable_USCI_interr_tx = false;
 }
+
+void config_SPI_stim(SPI_config_struct* SPI_config){
+  SPI_config->Master_Slave = 'M';       //M: Master, S: Slave
+  SPI_config->inactive_state = 'L';     // clock polarity inactive low
+  //data cHanged on the first UCLK edge and captured on the following edge
+  //data cAptured on the first UCLK edge and changed on the following edge
+  SPI_config->data_on_clock_edge = 'A'; 
+  SPI_config->SPI_length = 8;
+  SPI_config->first_Byte_sent = 'M'; //M: MSB, L: LSB
+    /*clk_ref:
+      U --> UCLK
+      A --> ACLK
+      S --> SMCLK
+  */
+  SPI_config->clk_ref_SPI = 'S';
+  SPI_config->clk_div = 2;
+  SPI_config->enable_USCI_interr_rx = false;
+  SPI_config->enable_USCI_interr_tx = false;
+}
+
+void init_SPI_for_Intan(uint16_t clk_divisor) {
+    // Poner en reset al USCI_A0
+    UCA0CTL1 |= UCSWRST;
+
+    // Limpiar todos los registros USCI_A0
+    UCA0CTL0 = 0;        // Borra CPOL, CPHA, MSB/LSB, modo master/slave, síncrono
+    UCA0CTL1 = 0;
+    UCA0BR0 = 0;
+    UCA0BR1 = 0;
+    UCA0MCTL = 0;
+
+    // Limpiar pines de selección
+    P2SEL &= ~(BIT4 | BIT5);
+    P3SEL &= ~BIT0;
+
+    // Configuración de pines SPI
+    P2SEL |= BIT4 | BIT5; // SIMO, SOMI
+    P3SEL |= BIT0;         // CLK
+
+    // Configuración USCI_A0 en SPI Master, MSB first, Mode 0
+    UCA0CTL0 = UCMST   // Master
+             | UCSYNC  // Síncrono
+             | UCMSB;  // MSB first
+    // CPOL=0, CPHA=0, por defecto
+
+    // Fuente de clock: SMCLK
+    UCA0CTL1 |= UCSSEL_2;
+
+    // Divisor de reloj
+    UCA0BR1 = clk_divisor / 256;
+    UCA0BR0 = clk_divisor % 256;
+
+    // Sin modulación
+    UCA0MCTL = 0;
+
+    // Quitar reset → activar USCI_A0
+    UCA0CTL1 &= ~UCSWRST;
+}
+
+
 
 
 int main(void) {
@@ -217,15 +306,29 @@ int main(void) {
 
   #else
 
-  #if (UART_USAGE)
-    //************************** UART configuration *****************************
-    setup_UART(UART_config);
+  #if (SENSE_OR_STIM==3)
+      config_SPI_stim(&SPI_config);
+      // config_SPI(&SPI_config);
+      SPI_setup(&SPI_config);
 
+
+      // init_SPI_for_Intan(2);
+      INTAN_LED_setup(); // Setup P4.3 for LED output
+      OFF_INTAN_LED();
+
+      initialize_INTAN(&INTAN_config);
+    
   #else
-    //************************** SPI configuration *****************************
-    config_SPI(&SPI_config);
-    SPI_setup(&SPI_config);
+    #if (UART_USAGE)
+      //************************** UART configuration *****************************
+      setup_UART(UART_config);
 
+    #else
+      //************************** SPI configuration *****************************
+      config_SPI(&SPI_config);
+      SPI_setup(&SPI_config);
+
+    #endif
   #endif
 
   #if (SENSE_OR_STIM==1)
@@ -304,50 +407,112 @@ int main(void) {
       CS_setup();
       ON_CS_pin();
       stim_en_setup();
+      button_init();
 
-      pckt_count = 0;
       INTAN_config.step_sel = 1000;
 
       INTAN_config.target_voltage = 1.2;
       INTAN_config.CL_sel = 1;
       stim_en_OFF();
-      // create_arrays(&INTAN_config);
-      create_stim_SPI_arrays(&INTAN_config);
-      while(pckt_count != INTAN_config.max_size){       
-        if (state == 1){
-          update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
-          pckt_count++;
-          state = 2;      
-        }
-        else if (state == 2){
-          OFF_CS_pin();
-          state = 1;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_1;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_2;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_3;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          UCA0TXBUF = packet_4;
-          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-          ON_CS_pin();           
-        }
-      }
-        bool button_pressed =true;
+      // create_example_SPI_arrays(&INTAN_config);
+      // create_stim_SPI_arrays(&INTAN_config);
+
+      // check_intan_SPI_array(&INTAN_config);
+      // clear_command(&INTAN_config);
+
+
+      // while(pckt_count != INTAN_config.max_size){       
+      //   if (state == 1){
+      //     update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
+      //     pckt_count++;
+      //     state = 2;      
+      //   }
+      //   else if (state == 2){
+      //     OFF_CS_pin();
+      //     state = 1;
+      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      //     UCA0TXBUF = packet_1;
+      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      //     UCA0TXBUF = packet_2;
+      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      //     UCA0TXBUF = packet_3;
+      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      //     UCA0TXBUF = packet_4;
+      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      //     ON_CS_pin();           
+      //   }
+      // }
+      //   bool next_stim =true;
+
+      // while(1){
+      //   next_stim = button_pressed();
+      //   if(next_stim == true){
+      //     ON_pin();
+      //     num_stim = NUM_STIM_EXP;
+      //     while(num_stim > 0){
+      //           // stim_en_ON();
+      //           // wait_30_seconds();
+      //           // stim_en_OFF();
+      //           // wait_5_mins();
+                
+      //           stim_en_ON();
+      //           wait_3_seconds();
+      //           stim_en_OFF();
+      //           wait_5_seconds();
+                
+      //           num_stim--;
+      //     }
+      //     OFF_pin();
+      //   }
+      // }
+      
+
 
       while(1){
-        if(button_pressed == true){
-          num_stim = 5;
-          while(num_stim > 0){
-                stim_en_ON();
-                wait_3_seconds();
-                stim_en_OFF();
-                wait_5_seconds();
-                num_stim--;
+        bool next_stim = button_pressed();
+        if(next_stim == true){
+          check_intan_SPI_array(&INTAN_config);
+
+          // read_command(&INTAN_config, STIM_ENABLE_A_reg);
+          // read_command(&INTAN_config, STIM_ENABLE_B_reg);
+
+          write_command(&INTAN_config, STIM_ENABLE_A_reg,0x0000);
+          write_command(&INTAN_config, STIM_ENABLE_B_reg,0x0000);
+
+          clear_command(&INTAN_config);
+
+          // read_command(&INTAN_config, STIM_ENABLE_A_reg);
+          // read_command(&INTAN_config, STIM_ENABLE_B_reg);
+
+          // write_command(&INTAN_config, 0x00,0x0000);
+          // read_command(&INTAN_config, 0x00);
+
+          // fc_high(&INTAN_config, 'k', 7.5); //TODO crear una variable para K y para 7.5 y que se pueda configurar al inicio del todo
+          // read_command(&INTAN_config, ADC_HIGH_FREQ_4);
+          // read_command(&INTAN_config, ADC_HIGH_FREQ_5);
+          // fc_low_A(&INTAN_config, 5.0);
+          // fc_low_B(&INTAN_config, 1000);
+          // read_command(&INTAN_config, ADC_LOW_FREQ_A);
+          // read_command(&INTAN_config, ADC_LOW_FREQ_B);
+
+          // enable_M_flag(&INTAN_config);
+          // enable_U_flag(&INTAN_config);
+          // enable_H_flag(&INTAN_config);
+          // enable_D_flag(&INTAN_config);
+
+          // convert_channel(&INTAN_config, 0);
+          // convert_channel(&INTAN_config, 14);
+          // convert_N_channels(&INTAN_config, 8);
+
+          
+
+          
+
+          state = 1;
+          send_SPI_commands(state, &INTAN_config, &packet_1, &packet_2, &packet_3, &packet_4);
+          while(next_stim == true){
+            next_stim = button_pressed();
           }
-          button_pressed = false;
-          button_pressed = true;
         }
       }
     #endif
@@ -460,7 +625,7 @@ void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
         SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
         #if (ECG_or_EEG != 1)
         // 2. Wait for stability
-        __delay_cycles(1600);        // 12.5 µs @ 8 MHz
+        __delay_cycles(2000);        // 12.5 µs @ 8 MHz
 
         // 3. Start conversion and discard
         SD16CCTL0 |= SD16SC;

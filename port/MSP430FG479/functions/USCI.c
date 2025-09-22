@@ -683,7 +683,7 @@ void SPI_clk_division(int clk_div){
 
 
 void SPI_clk_polarity_phase(char inactive_state, char data_on_clock_edge){
-    UCA0CTL0  &= ~(UCSYNC|UCCKPL);    //3-pin, 8-bit SPI master
+    UCA0CTL0  &= ~(UCCKPH|UCCKPL);    //3-pin, 8-bit SPI master
 
     switch (inactive_state) {
         case 'L': // clock polarity inactive low
@@ -703,7 +703,7 @@ void SPI_clk_polarity_phase(char inactive_state, char data_on_clock_edge){
         case 'H': //data cHanged on the first UCLK edge and captured on the following edge
             break;
         case 'A': //data cAptured on the first UCLK edge and changed on the following edge
-            UCA0CTL0 |= UCSYNC;
+            UCA0CTL0 |= UCCKPH;
             break;
         default:
             perror("Error: Not available SPI clock polarity.");
