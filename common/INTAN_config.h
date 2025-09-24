@@ -58,6 +58,15 @@ typedef struct{
 
     uint8_t initial_channel_to_convert; // The initial channel we want to start converting when using convert_n_channels
     
+    uint16_t step_DAC;
+    uint16_t PBIAS_curr;
+    uint16_t NBIAS_curr;
+
+    bool waiting_trigger;
+
+    double voltage_recovery;
+    uint16_t current_recovery;
+
     } INTAN_config_struct;
 
 #endif
@@ -81,7 +90,7 @@ void clear_command(INTAN_config_struct* INTAN_config);
 
 // Function for write command
 void write_command(INTAN_config_struct* INTAN_config, uint8_t R, uint16_t D);
-void read_command(INTAN_config_struct* INTAN_config, uint8_t R);
+void read_command(INTAN_config_struct* INTAN_config, uint8_t R, char id);
 
 // Function for sending SPI commands
 void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4);
@@ -99,9 +108,31 @@ void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel);
 void convert_N_channels(INTAN_config_struct* INTAN_config, uint8_t number_channels);
 
 
+// stim Step DAC configuration
+uint16_t step_sel_united(uint16_t step_sel);
+void stim_step_DAC_configuration(INTAN_config_struct* INTAN_config);
+
+// Stim Pbias and Nbias configuration
+void stim_PNBIAS_configuration(INTAN_config_struct* INTAN_config);
+
+// Stimulation current configuration for each channel separately, positive and negative trim and magnitude
+void stim_current_channel_configuration(INTAN_config_struct* INTAN_config, uint8_t channel, uint8_t neg_current_trim, uint8_t neg_current_mag, uint8_t pos_current_trim, uint8_t pos_current_mag);
+
+// Compliance monitor related (register 40)
+void clean_compliance_monitor(INTAN_config_struct* INTAN_config);
+void check_compliance_monitor(INTAN_config_struct* INTAN_config);
+
 // Unify two values of 8 or 16 bits to one of 16 bits
 uint16_t unify_8bits(uint8_t high, uint8_t low);
 uint32_t unify_16bits(uint16_t high, uint16_t low);
+
+
+// Connect the electrode to the gnd reference electrode
+void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel);
+
+// Current-limited charge recovery circuit
+void charge_recovery_current_configuration(INTAN_config_struct* INTAN_config);
+void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config);
 
 void create_example_SPI_arrays(INTAN_config_struct* INTAN_config);
 void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config);
@@ -118,7 +149,6 @@ void check_intan_SPI_array(INTAN_config_struct* INTAN_config);
  */
 void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4, INTAN_config_struct* INTAN_config);
 
-uint16_t step_sel_united(uint16_t step_sel);
 
 void split_uint16(uint16_t input, uint8_t* high_byte, uint8_t* low_byte);
 

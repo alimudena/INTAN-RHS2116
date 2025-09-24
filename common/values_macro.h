@@ -194,7 +194,7 @@
 #define SEL1_5uA   38
 #define SEL1_10uA  15
 
-// 6 bits for SEL 1
+// 6 bits for SEL 2
 #define SEL2_10nA  19
 #define SEL2_20nA  40
 #define SEL2_50nA  40
@@ -206,7 +206,7 @@
 #define SEL2_5uA   0
 #define SEL2_10uA  0
 
-// 2 bits for SEL 1
+// 2 bits for SEL 3
 #define SEL3_10nA  3
 #define SEL3_20nA  1
 #define SEL3_50nA  0

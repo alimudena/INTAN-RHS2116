@@ -46,7 +46,7 @@
 #define ADC_LOW_FREQ_B                  0x07 //6
 
 // Current-Limited Charge Recovery Target Voltage
-#define CURRENT_LIMITED_CHARGE_RECOVERY 0x24 //36
+#define CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET 0x24 //36
 
 // Charge Recovery Current Limit 
 #define CHARGE_RECOVERY_CURRENT_LIMIT   0x25 //37

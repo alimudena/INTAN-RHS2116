@@ -471,15 +471,15 @@ int main(void) {
       while(1){
         bool next_stim = button_pressed();
         if(next_stim == true){
-          check_intan_SPI_array(&INTAN_config);
+          // check_intan_SPI_array(&INTAN_config);
 
           // read_command(&INTAN_config, STIM_ENABLE_A_reg);
           // read_command(&INTAN_config, STIM_ENABLE_B_reg);
 
-          write_command(&INTAN_config, STIM_ENABLE_A_reg,0x0000);
-          write_command(&INTAN_config, STIM_ENABLE_B_reg,0x0000);
+          // write_command(&INTAN_config, STIM_ENABLE_A_reg,0x0000);
+          // write_command(&INTAN_config, STIM_ENABLE_B_reg,0x0000);
 
-          clear_command(&INTAN_config);
+          // clear_command(&INTAN_config);
 
           // read_command(&INTAN_config, STIM_ENABLE_A_reg);
           // read_command(&INTAN_config, STIM_ENABLE_B_reg);
@@ -495,16 +495,38 @@ int main(void) {
           // read_command(&INTAN_config, ADC_LOW_FREQ_A);
           // read_command(&INTAN_config, ADC_LOW_FREQ_B);
 
+
+          // Functions for enabling and disabling flags
           // enable_M_flag(&INTAN_config);
           // enable_U_flag(&INTAN_config);
           // enable_H_flag(&INTAN_config);
           // enable_D_flag(&INTAN_config);
 
+          /*Conversion of channels*/
           // convert_channel(&INTAN_config, 0);
           // convert_channel(&INTAN_config, 14);
           // convert_N_channels(&INTAN_config, 8);
 
-          
+          /*stimulation current configuration */
+          // stim_step_DAC_configuration(&INTAN_config);
+          // stim_PNBIAS_configuration(&INTAN_config);
+
+          // stim_current_channel_configuration(&INTAN_config, 4, 15, 15, 15, 15);
+
+          // Compliance monitor related functions
+          // clean_compliance_monitor(&INTAN_config);
+          // check_compliance_monitor(&INTAN_config);
+          // connect_channel_to_gnd(&INTAN_config, 8);
+          // connect_channel_to_gnd(&INTAN_config, 2);
+          // connect_channel_to_gnd(&INTAN_config, 0);
+
+          // Current and voltage limited charge recovery circuit configuration
+          // charge_recovery_current_configuration(&INTAN_config);
+          charge_recovery_voltage_configuration(&INTAN_config);
+          INTAN_config.voltage_recovery = 0;
+          charge_recovery_voltage_configuration(&INTAN_config);
+          INTAN_config.voltage_recovery = 1.225;
+          charge_recovery_voltage_configuration(&INTAN_config);
 
           
 

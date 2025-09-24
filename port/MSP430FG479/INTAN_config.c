@@ -61,7 +61,12 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
     INTAN_config->C2_enabled = false;
 
     INTAN_config->initial_channel_to_convert = 3;
-
+    INTAN_config->step_DAC = 10;
+    INTAN_config->waiting_trigger = false;
+    
+    INTAN_config->current_recovery = 20;
+    INTAN_config->voltage_recovery = -1.225;
+    
 }
 
 
@@ -178,7 +183,7 @@ void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* pa
 
 // Funtion used to check if the returned values are correct or not
 bool check_received_commands(INTAN_config_struct* INTAN_config){
-    int16_t index;
+    uint16_t index;
     // If the value to be compared actually does not mean anything (as if it a read function) return true
     for (index = 0; index < INTAN_config->max_size-1; index++){
         if (INTAN_config->expected_RX_bool[index] == 1) {       
@@ -193,6 +198,16 @@ bool check_received_commands(INTAN_config_struct* INTAN_config){
             }
                 INTAN_config->obtained_RX[index+2] = 0;
                 INTAN_config->expected_RX[index] = 0;
+        }
+        if (INTAN_config->instruction[index] == 'M'){
+            int i;
+            for (i = 0; i < 16; i++) {
+                // Compare bit a bit if any has a value 1 this one is related to the reading of the register 40 in the compliance monitor
+                if (INTAN_config->obtained_RX[index+2] & (1 << i)) {
+                    perror("Initialyzing compliance monitor.");
+                }
+            }
+          
         }
     }
 
@@ -300,7 +315,7 @@ void write_command(INTAN_config_struct* INTAN_config, uint8_t R, uint16_t D){
 
 }
 
-void read_command(INTAN_config_struct* INTAN_config, uint8_t R){
+void read_command(INTAN_config_struct* INTAN_config, uint8_t R, char id){
     volatile uint16_t reg_config_num = INTAN_config->max_size;
     // Flag U on M off
     if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == false)){
@@ -325,7 +340,7 @@ void read_command(INTAN_config_struct* INTAN_config, uint8_t R){
 
     INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
     INTAN_config->expected_RX_bool[reg_config_num] = 0;
-    INTAN_config->instruction[reg_config_num] = 'R';
+    INTAN_config->instruction[reg_config_num] = id;
 
     reg_config_num += 1;
 
@@ -802,6 +817,7 @@ void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel){
 
     INTAN_config->expected_RX_bool[reg_config_num] = 0;
     INTAN_config->instruction[reg_config_num] = 'O';
+    INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
 
 
     reg_config_num += 1;
@@ -858,6 +874,7 @@ void convert_N_channels(INTAN_config_struct* INTAN_config, uint8_t number_channe
 
     INTAN_config->expected_RX_bool[reg_config_num] = 0;
     INTAN_config->instruction[reg_config_num] = 'O';
+    INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
 
 
     reg_config_num += 1;
@@ -895,7 +912,9 @@ void convert_N_channels(INTAN_config_struct* INTAN_config, uint8_t number_channe
         INTAN_config->array4[reg_config_num] = ZEROS_8;
 
         INTAN_config->expected_RX_bool[reg_config_num] = 0;
+        INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
         INTAN_config->instruction[reg_config_num] = 'O';
+    
 
 
         reg_config_num += 1;
@@ -903,23 +922,14 @@ void convert_N_channels(INTAN_config_struct* INTAN_config, uint8_t number_channe
     INTAN_config->max_size = reg_config_num;
 }
 
-uint16_t unify_8bits(uint8_t high, uint8_t low) {
-    return ((uint16_t)high << 8) | low;
-}
-
-
-uint32_t unify_16bits(uint16_t high, uint16_t low) {
-    return ((uint32_t)high << 16) | low;
-}
-
-
-// Step selection values as lookup tables
+// step selection as DAC configuration as a general thing for the register 35
 typedef struct {
     uint16_t current_nA;  // Current step in nA
     uint8_t sel1;         // 7 bits
     uint8_t sel2;         // 6 bits
     uint8_t sel3;         // 2 bits
 } StepConfig;
+
 
 static const StepConfig step_table[] = {
     // step_sel   sel1       sel2       sel3
@@ -935,7 +945,31 @@ static const StepConfig step_table[] = {
     { /*10uA*/ 10000,    SEL1_10uA,         SEL2_10uA,         SEL3_10uA }
 };
 
-// Step selection values as lookup tables
+
+uint16_t step_sel_united(uint16_t step_sel) {
+    unsigned int i;
+    for (i = (sizeof(step_table) / sizeof(step_table[0])) - 1; i < sizeof(step_table) / sizeof(step_table[0]); --i) {
+        if (step_table[i].current_nA == step_sel) {
+            StepConfig cfg = step_table[i];
+            uint16_t result = 0;
+            result |= (cfg.sel3 & 0x03) << 13;
+            result |= (cfg.sel2 & 0x3F) << 7;
+            result |= (cfg.sel1 & 0x7F);
+            return result;
+        }
+    }
+    return 0; // Return 0 if step_sel is invalid
+}
+
+
+void stim_step_DAC_configuration(INTAN_config_struct* INTAN_config){
+    // uint16_t step_DAC_selected;
+    uint16_t step_DAC_selected = step_sel_united(INTAN_config->step_DAC);
+    write_command(INTAN_config, STIM_STEP_SIZE, step_DAC_selected);
+
+}
+
+// step selection as DAC configuration as a general thing for the register 35
 typedef struct {
     uint16_t current_nA;  // Current step in nA
     uint8_t PBIAS;         // 7 bits
@@ -956,7 +990,84 @@ static const BiasVoltageConfig bias_voltage_table[] = {
     { /*10uA*/ 10000,    PBIAS_10uA,         NBIAS_10uA}
 };
 
-// Step selection values as lookup tables
+uint16_t vias_voltages_sel(uint16_t step_sel) {
+    unsigned int i;
+    for (i = (sizeof(bias_voltage_table) / sizeof(bias_voltage_table[0])) - 1; i < sizeof(bias_voltage_table) / sizeof(bias_voltage_table[0]); --i) {
+        if (bias_voltage_table[i].current_nA == step_sel) {
+            BiasVoltageConfig cfg = bias_voltage_table[i];
+            uint16_t result = 0;
+            result |= (cfg.PBIAS & 0x3F) << 8;
+            result |= (cfg.NBIAS & 0x7F);
+            return result;
+        }
+    }
+    return 0; // Return 0 if step_sel is invalid
+}
+
+
+void stim_PNBIAS_configuration(INTAN_config_struct* INTAN_config){
+    // uint16_t step_DAC_selected;
+    uint16_t BIAS_selected = vias_voltages_sel(INTAN_config->step_DAC);
+    write_command(INTAN_config, STIM_BIAS_VOLTAGE, BIAS_selected);
+
+}
+
+// Configuration of the current for each channel, channels start from 0 to 15
+void stim_current_channel_configuration(INTAN_config_struct* INTAN_config, uint8_t channel, uint8_t neg_current_trim, uint8_t neg_current_mag, uint8_t pos_current_trim, uint8_t pos_current_mag){
+    if (channel > 15){
+        while(1){
+            ON_INTAN_LED();
+        }
+    }
+    uint8_t curr_reg_neg = channel + 64;
+    uint8_t curr_reg_pos = channel + 96;
+    uint16_t negative = unify_8bits(neg_current_trim, neg_current_mag);
+    uint16_t positive = unify_8bits(pos_current_trim, pos_current_mag);
+    write_command(INTAN_config, curr_reg_neg, negative);
+    write_command(INTAN_config, curr_reg_pos, positive);
+    if (!(INTAN_config->waiting_trigger)){
+        INTAN_config->waiting_trigger = true;
+    }
+}
+
+
+
+uint16_t unify_8bits(uint8_t high, uint8_t low) {
+    return ((uint16_t)high << 8) | low;
+}
+
+
+uint32_t unify_16bits(uint16_t high, uint16_t low) {
+    return ((uint32_t)high << 16) | low;
+}
+
+// Clean the compliance monitor register
+void clean_compliance_monitor(INTAN_config_struct* INTAN_config){
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, REGISTER_VALUE_TEST, 't');
+    disable_M_flag(INTAN_config);    
+}
+
+
+// Check the compliance monitor to see if all the channels are in a correct charging position
+void check_compliance_monitor(INTAN_config_struct* INTAN_config){
+    read_command(INTAN_config, COMPLIANCE_MONITOR, 'M');
+}
+
+// Activate the charge recovery switch by connecting a channel to the stim_GND electrode witting in channel 46. 
+// Channels are connected one by one.
+void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel){
+    if (channel > 15){
+        ON_INTAN_LED();
+          perror("Trying to connect a too high channel to gnd.");
+        while(1);
+    }
+    write_command(INTAN_config, CHRG_RECOV_SWITCH, channel+1);
+    INTAN_config->waiting_trigger = true;
+}
+
+
+// Recovery current limited to get to the Vrecov
 typedef struct {
     uint16_t current_nA;  // Current step in nA
     uint8_t sel1;         // 7 bits
@@ -978,37 +1089,6 @@ static const chrg_recov_curr_lim_config chrg_recov_curr_lim_table[] = {
     {  /*1000nA*/ 1000,  CL_SEL1_1uA,         CL_SEL2_1uA,         CL_SEL3_1uA }
 };
 
-uint16_t step_sel_united(uint16_t step_sel) {
-    unsigned int i;
-    for (i = (sizeof(step_table) / sizeof(step_table[0])) - 1; i < sizeof(step_table) / sizeof(step_table[0]); --i) {
-        if (step_table[i].current_nA == step_sel) {
-            StepConfig cfg = step_table[i];
-            uint16_t result = 0;
-            result |= (cfg.sel3 & 0x03) << 13;
-            result |= (cfg.sel2 & 0x3F) << 7;
-            result |= (cfg.sel1 & 0x7F);
-            return result;
-        }
-    }
-    return 0; // Return 0 if step_sel is invalid
-}
-
-
-uint8_t vias_voltages_sel(uint16_t step_sel) {
-    unsigned int i;
-    for (i = (sizeof(bias_voltage_table) / sizeof(bias_voltage_table[0])) - 1; i < sizeof(bias_voltage_table) / sizeof(bias_voltage_table[0]); --i) {
-        if (bias_voltage_table[i].current_nA == step_sel) {
-            BiasVoltageConfig cfg = bias_voltage_table[i];
-            uint8_t result = 0;
-            result |= (cfg.PBIAS & 0x3F) << 4;
-            result |= (cfg.NBIAS & 0x7F);
-            return result;
-        }
-    }
-    return 0; // Return 0 if step_sel is invalid
-}
-
-
 uint16_t chrg_recov_curr_lim_united(uint16_t curr_lim_sel) {
     unsigned int i;
     for (i = (sizeof(chrg_recov_curr_lim_table) / sizeof(chrg_recov_curr_lim_table[0])) - 1; i < sizeof(chrg_recov_curr_lim_table) / sizeof(chrg_recov_curr_lim_table[0]); --i) {
@@ -1023,6 +1103,64 @@ uint16_t chrg_recov_curr_lim_united(uint16_t curr_lim_sel) {
     }
     return 0; // Return 0 if curr_lim_sel is invalid
 }
+
+void charge_recovery_current_configuration(INTAN_config_struct* INTAN_config){
+    uint16_t current_lim_sel = chrg_recov_curr_lim_united(INTAN_config->current_recovery);
+    write_command(INTAN_config, CHARGE_RECOVERY_CURRENT_LIMIT, current_lim_sel);
+}
+
+
+// Voltage at witch the electrodes will be driven with a concrete current value
+void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config){
+    double voltage = INTAN_config->voltage_recovery;
+    // Force the value of the voltage to be between +1.225 and -1.215
+
+    if (voltage < -1.225) voltage = -1.225;
+    if (voltage >  1.215) voltage =  1.215;
+
+    // Transformación: valor_reg = 128 + (V / 0.00957)
+    int value = (int)round(128.0 + (voltage / 0.00957));
+
+    // Make sure is beatween 0 and 255
+    if (value < 0)   value = 0;
+    if (value > 255) value = 255;
+
+    write_command(INTAN_config, CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET, value);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /**
@@ -1060,7 +1198,7 @@ void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
     uint8_t step_L;
     split_uint16(step_sel_united(INTAN_config->step_sel), &step_H, &step_L);
 
-    uint8_t BiasVol; 
+    uint16_t BiasVol; 
     BiasVol = vias_voltages_sel(INTAN_config->step_sel);
 
     uint8_t dac_value;
@@ -1118,7 +1256,7 @@ void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
 
     //REGISTER 36: Current-Limited Charge Recovery Target Voltage
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY;
+    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = dac_value;
     reg_config_num++;
@@ -1250,7 +1388,7 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
     uint8_t step_L;
     split_uint16(step_sel_united(INTAN_config->step_sel), &step_H, &step_L);
 
-    uint8_t BiasVol; 
+    uint16_t BiasVol; 
     BiasVol = vias_voltages_sel(INTAN_config->step_sel);
 
     uint8_t dac_value;
@@ -1317,7 +1455,7 @@ void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
     //6.  Establecer el voltaje objetivo de recuperacion de carga limitada en corriente (36)
     //REGISTER 36: Current-Limited Charge Recovery Target Voltage
     INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY;
+    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = dac_value;
     reg_config_num++;    
