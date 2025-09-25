@@ -38,6 +38,14 @@
 // Stimulation Bias Voltages
 #define STIM_BIAS_VOLTAGE               0x23 //35
 
+// Supply sensor and ADC Buffer Vias Current
+#define ADC_BIAS_BUFFER                 0x00//0
+
+#define IMPEDANCE_CHECK_CONTROL         0x02//2
+#define IMPEDANCE_CHECK_DAC             0x03//3
+
+
+
 // ADC frequency band
 #define ADC_HIGH_FREQ_4                 0x04//4
 #define ADC_HIGH_FREQ_5                 0x05//5

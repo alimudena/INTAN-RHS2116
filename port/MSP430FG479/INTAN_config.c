@@ -66,7 +66,18 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
     
     INTAN_config->current_recovery = 20;
     INTAN_config->voltage_recovery = -1.225;
+    INTAN_config->ADC_sampling_rate = 100;
     
+    
+    INTAN_config->zcheck_select = 0;
+    INTAN_config->zcheck_DAC_enhable = 0;
+    INTAN_config->zcheck_load = 0;
+    INTAN_config->zcheck_scale = 0;
+    INTAN_config->zcheck_en = 0;
+
+    INTAN_config->zcheck_DAC_value = 0;
+
+
 }
 
 
@@ -125,7 +136,7 @@ void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* pa
 
     while(pckt_count != INTAN_config->max_size){       
             
-            wait_1_second();
+            // wait_1_second();
             
             OFF_CS_pin();
             __delay_cycles(CLK_5_CYCLES);
@@ -1130,10 +1141,67 @@ void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config){
 }
 
 
+// ADC Buffer Bias Current related registers
+void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config){
+    uint16_t sampling_rate = INTAN_config->ADC_sampling_rate;
+    uint8_t ADC_buffer_bias;
+    uint8_t MUX_bias;
+        if (sampling_rate <= 120){
+            ADC_buffer_bias = ADC_BUFFER_BIAS_less_120k;
+            MUX_bias = MUX_BIAS_less_120k;
+        } else if (sampling_rate > 120 & sampling_rate <= 140) {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_140k;
+            MUX_bias = MUX_BIAS_140k;
+        } else if (sampling_rate > 140 & sampling_rate <= 175) {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_175k;
+            MUX_bias = MUX_BIAS_175k;        
+        } else if (sampling_rate > 175 & sampling_rate <= 220) {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_220k;
+            MUX_bias = MUX_BIAS_220k;        
+        } else if (sampling_rate > 220 & sampling_rate <= 280) {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_280k;
+            MUX_bias = MUX_BIAS_280k;        
+        } else if (sampling_rate > 280 & sampling_rate <= 350) {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_350k;
+            MUX_bias = MUX_BIAS_350k;        
+        } else if (sampling_rate > 350 & sampling_rate <= 440) {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_440k;
+            MUX_bias = MUX_BIAS_440k;        
+        } else {
+            ADC_buffer_bias = ADC_BUFFER_BIAS_more_440k;
+            MUX_bias = MUX_BIAS_more_440k;                
+        }
+
+    uint16_t bias_value = ((uint16_t)ADC_buffer_bias << 6) | MUX_bias;
+
+    write_command(INTAN_config, ADC_BIAS_BUFFER, bias_value);
+    
+    
+}
 
 
+// Impedance check control register 2 configuration
+void impedance_check_control(INTAN_config_struct* INTAN_config){
+    uint8_t zcheck_select = INTAN_config->zcheck_select;
+    bool zcheck_DAC_enhable = INTAN_config->zcheck_DAC_enhable;
+    bool zcheck_load = INTAN_config->zcheck_load;
+    uint8_t zcheck_scale = INTAN_config->zcheck_scale;
+    bool zcheck_en = INTAN_config->zcheck_en;
+    
+    if (zcheck_select > 15){
+        ON_INTAN_LED();
+        while(1);
+    }
+    
+    uint16_t reg_value = ((uint16_t)zcheck_select << 8) | ((uint16_t)zcheck_DAC_enhable << 6) | ((uint16_t)zcheck_load << 5) | ((uint16_t)zcheck_scale << 3) | zcheck_en;
+    write_command(INTAN_config, IMPEDANCE_CHECK_CONTROL, reg_value);
+}
 
+// Impedance check DAC value
+void impedance_check_DAC(INTAN_config_struct* INTAN_config){
+    write_command(INTAN_config, IMPEDANCE_CHECK_DAC, INTAN_config->zcheck_DAC_value);
 
+}
 
 
 

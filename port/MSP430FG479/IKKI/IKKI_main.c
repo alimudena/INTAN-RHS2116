@@ -522,14 +522,52 @@ int main(void) {
 
           // Current and voltage limited charge recovery circuit configuration
           // charge_recovery_current_configuration(&INTAN_config);
-          charge_recovery_voltage_configuration(&INTAN_config);
-          INTAN_config.voltage_recovery = 0;
-          charge_recovery_voltage_configuration(&INTAN_config);
-          INTAN_config.voltage_recovery = 1.225;
-          charge_recovery_voltage_configuration(&INTAN_config);
+          // charge_recovery_voltage_configuration(&INTAN_config);
+          // INTAN_config.voltage_recovery = 0;
+          // charge_recovery_voltage_configuration(&INTAN_config);
+          // INTAN_config.voltage_recovery = 1.225;
+          // charge_recovery_voltage_configuration(&INTAN_config);
 
+          // INTAN_config.ADC_sampling_rate = 100;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 130;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 150;
+          // ADC_sampling_rate_config(&INTAN_config);          
+          // INTAN_config.ADC_sampling_rate = 210;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 260;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 300;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 370;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 440;
+          // ADC_sampling_rate_config(&INTAN_config);
+          // INTAN_config.ADC_sampling_rate = 500;
+          // ADC_sampling_rate_config(&INTAN_config);
+
+          // impedance_check_control(&INTAN_config);
+          // INTAN_config.zcheck_select = 5;
+          // INTAN_config.zcheck_DAC_enhable = 1;
+          // INTAN_config.zcheck_load = 1;
+          // INTAN_config.zcheck_scale = 1;
+          // INTAN_config.zcheck_en = 1;
+          // impedance_check_control(&INTAN_config);
+          // INTAN_config.zcheck_select = 2;
+          // INTAN_config.zcheck_DAC_enhable = 1;
+          // INTAN_config.zcheck_load = 0;
+          // INTAN_config.zcheck_scale = 0;
+          // INTAN_config.zcheck_en = 1;
+          // impedance_check_control(&INTAN_config);
+
+
+          // impedance_check_DAC(&INTAN_config);
+          // INTAN_config.zcheck_DAC_value = 255;
+          // impedance_check_DAC(&INTAN_config);
+          // INTAN_config.zcheck_DAC_value = 8;
+          // impedance_check_DAC(&INTAN_config);
           
-
           state = 1;
           send_SPI_commands(state, &INTAN_config, &packet_1, &packet_2, &packet_3, &packet_4);
           while(next_stim == true){

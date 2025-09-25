@@ -67,6 +67,17 @@ typedef struct{
     double voltage_recovery;
     uint16_t current_recovery;
 
+    uint16_t ADC_sampling_rate;
+
+    uint8_t zcheck_select;
+    bool zcheck_DAC_enhable;
+    bool zcheck_load;
+    bool zcheck_scale;
+    bool zcheck_en;
+
+    uint8_t zcheck_DAC_value;
+
+
     } INTAN_config_struct;
 
 #endif
@@ -133,6 +144,21 @@ void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel);
 // Current-limited charge recovery circuit
 void charge_recovery_current_configuration(INTAN_config_struct* INTAN_config);
 void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config);
+
+// Configuration of the ADC sampling rate, depending on the master's frequency of functioning
+void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config);
+
+// Impedance check control register 2 configuration
+void impedance_check_control(INTAN_config_struct* INTAN_config);
+
+// Impedance check DAC value
+void impedance_check_DAC(INTAN_config_struct* INTAN_config);
+
+
+
+
+
+
 
 void create_example_SPI_arrays(INTAN_config_struct* INTAN_config);
 void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config);
