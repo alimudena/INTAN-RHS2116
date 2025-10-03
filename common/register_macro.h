@@ -39,19 +39,29 @@
 #define STIM_BIAS_VOLTAGE               0x23 //35
 
 // Supply sensor and ADC Buffer Vias Current
-#define ADC_BIAS_BUFFER                 0x00//0
+#define ADC_BIAS_BUFFER                 0x00 //0
 
-#define IMPEDANCE_CHECK_CONTROL         0x02//2
-#define IMPEDANCE_CHECK_DAC             0x03//3
+//Register 1 configures many things
+#define REGISTER_1                      0x01 //1
 
+#define IMPEDANCE_CHECK_CONTROL         0x02 //2
+#define IMPEDANCE_CHECK_DAC             0x03 //3
 
 
 // ADC frequency band
-#define ADC_HIGH_FREQ_4                 0x04//4
-#define ADC_HIGH_FREQ_5                 0x05//5
+#define ADC_HIGH_FREQ_4                 0x04 //4
+#define ADC_HIGH_FREQ_5                 0x05 //5
 
 #define ADC_LOW_FREQ_A                  0x06 //6
-#define ADC_LOW_FREQ_B                  0x07 //6
+#define ADC_LOW_FREQ_B                  0x07 //7
+
+#define ADC_INDIVIDUAL_AMP_POWER        0x08 //8
+
+
+#define AMPLIFIER_FAST_SETTLE           0x0A //10
+
+#define AMP_LOW_CUTOFF_FREQ_SELECT      0x0C //12
+
 
 // Current-Limited Charge Recovery Target Voltage
 #define CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET 0x24 //36

@@ -505,7 +505,7 @@ int main(void) {
           /*Conversion of channels*/
           // convert_channel(&INTAN_config, 0);
           // convert_channel(&INTAN_config, 14);
-          // convert_N_channels(&INTAN_config, 8);
+          // convert_N_channels(&INTAN_config);
 
           /*stimulation current configuration */
           // stim_step_DAC_configuration(&INTAN_config);
@@ -568,6 +568,59 @@ int main(void) {
           // INTAN_config.zcheck_DAC_value = 8;
           // impedance_check_DAC(&INTAN_config);
           
+          
+          // // Fault current detection
+          // fault_current_detection(&INTAN_config);
+
+
+          // // Enabling and controlling the digital external outputs 
+          // enable_digital_output_1(&INTAN_config);
+          // enable_digital_output_2(&INTAN_config);
+          // disable_digital_output_1(&INTAN_config);
+          // disable_digital_output_2(&INTAN_config);
+
+
+          // power_ON_output_1(&INTAN_config);
+          // power_ON_output_2(&INTAN_config);
+          // power_OFF_output_1(&INTAN_config);
+          // power_OFF_output_2(&INTAN_config);
+
+          // // Enables and disables C2 compliment dynamically if needed
+          // enable_C2(&INTAN_config);
+          // disable_C2(&INTAN_config);
+
+          // // Enable and disable absolute values
+          // enable_absolute_value(&INTAN_config);
+          // disable_absolute_value(&INTAN_config);
+
+          // // Digital signal processing filter HPF enable or disable
+          // disable_digital_signal_processing_HPF(&INTAN_config);
+          // enable_digital_signal_processing_HPF(&INTAN_config);
+
+          // INTAN_config.DSP_cutoff_freq = 1.2;
+          // INTAN_config.ADC_sampling_rate = 30000;
+          // INTAN_config.number_channels_to_convert = 1;
+
+          // DSP_cutoff_frequency_configuration(&INTAN_config);
+
+          // minimum_power_disipation(&INTAN_config);
+
+          // check_compliance_monitor(&INTAN_config);
+
+          power_up_AC(&INTAN_config);
+
+          INTAN_config.amplfier_cutoff_frequency_A_B[0] = 'B';
+          INTAN_config.amplfier_cutoff_frequency_A_B[8] = 'B';
+          A_or_B_cutoff_frequency(&INTAN_config);
+
+          INTAN_config.amplfier_reset[5] = true;
+          amp_fast_settle(&INTAN_config);
+
+          A_or_B_cutoff_frequency(&INTAN_config);
+
+          amp_fast_settle_reset(&INTAN_config);
+
+
           state = 1;
           send_SPI_commands(state, &INTAN_config, &packet_1, &packet_2, &packet_3, &packet_4);
           while(next_stim == true){

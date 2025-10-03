@@ -10,6 +10,24 @@
 #include <stdint.h>  // Necesario para uint16_t
 #include "functions/general_functions.h"
 
+
+
+/**
+ * Splits a 16-bit value into two 8-bit values.
+ *
+ * @param input     The 16-bit input value.
+ * @param high_byte Pointer to store the high (most significant) 8 bits.
+ * @param low_byte  Pointer to store the low (least significant) 8 bits.
+ */
+void split_uint16(uint16_t input, uint8_t* high_byte, uint8_t* low_byte) {
+    if (high_byte) {
+        *high_byte = (input >> 8) & 0xFF;  // Get the upper 8 bits
+    }
+    if (low_byte) {
+        *low_byte = input & 0xFF;          // Get the lower 8 bits
+    }
+}
+
 /*
     Functions for enabling and disabling the booleans described in the INTAN for MSP430
 */
@@ -55,11 +73,27 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
     for (i= MAX_VALUES; i > 0; i--) {
         INTAN_config->expected_RX[i-1] = 0;
         INTAN_config->obtained_RX[i-1] = 0;
-        INTAN_config->expected_RX_bool[i-1] = 0;
+        INTAN_config->expected_RX_bool[i-1] = 0;    
+        INTAN_config->time_restriction[i-1] = 0;
 
     }
+    
+    // Register 1
+    INTAN_config->digoutOD = false;
+    INTAN_config->digout2 = false;
+    INTAN_config->digout2HZ = false;
+    INTAN_config->digout1 = false;
+    INTAN_config->digout1HZ = false;
+
+    INTAN_config->weak_MISO = false;
+
     INTAN_config->C2_enabled = false;
 
+    INTAN_config->abs_mode = false;
+    INTAN_config->DSPen = false;
+    INTAN_config->DSP_cutoff_freq = 1;
+    
+    
     INTAN_config->initial_channel_to_convert = 3;
     INTAN_config->step_DAC = 10;
     INTAN_config->waiting_trigger = false;
@@ -77,33 +111,61 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
 
     INTAN_config->zcheck_DAC_value = 0;
 
+    
+    INTAN_config->fc_low_A = 10;
+    INTAN_config->fc_low_B = 10;
+    for (i = NUM_CHANNELS; i > 0; i--){
+        INTAN_config->amplfier_cutoff_frequency_A_B[i-1] = 'A';
+    }
+
+
+
+    
+
 
 }
 
 
-// Function used for sending SPI commands
+void send_values(INTAN_config_struct* INTAN_config, uint16_t pckt_count){
+    uint8_t rx_packet_1 = 1;
+    uint8_t rx_packet_2 = 2;
+    uint8_t rx_packet_3 = 3;
+    uint8_t rx_packet_4 = 4;
 
-/*While not all the commands have been sent:
-    State 1:
-        Update the packets to be sent in state 2
-    State 2:
-        Send the 4 packets and save the received values in the arrays for checking the values
+    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+    UCA0TXBUF = INTAN_config->array1[pckt_count];
+    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_1=UCA0RXBUF;
+    // __delay_cycles(CLK_2_CYCLES);
 
-  When all the commands have been sent:
-    Check that the received values are correct using the function for checking it. 
-    If the returned value of the function is false:
-        enter a while loop and turn on the led for the INTAN configuration warning
-    Else: exit the function
+    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+    UCA0TXBUF = INTAN_config->array2[pckt_count];
+    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_2=UCA0RXBUF;
+    // __delay_cycles(CLK_2_CYCLES);
 
-  */  
-void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* packet_1, uint8_t* packet_2, uint8_t* packet_3, uint8_t* packet_4){
+    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
+    UCA0TXBUF = INTAN_config->array3[pckt_count];
+    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_3=UCA0RXBUF;
+    // __delay_cycles(CLK_2_CYCLES);
 
-    /*
-    Se añade a la lista de envíos dos dummies para que se puedan comprobar todas las recepciones tras los envíos.
-    Si no se hace esto entonces habría que implementar una lógica adicional de traslado de paquetes hacia el inicio de los que se han recibido y 
-    comprobarlo más adelante, aciendo que el fallo venga más tarde de lo deseado y pudiendo producir un error indeseado como una configuración mala.
-    */
+    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
+    UCA0TXBUF = INTAN_config->array4[pckt_count];
+    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_4=UCA0RXBUF;
+
     
+    uint32_t rx_value = ((uint32_t)rx_packet_1 << 24) |
+        ((uint32_t)rx_packet_2 << 16) |
+        ((uint32_t)rx_packet_3 << 8)  |
+        ((uint32_t)rx_packet_4);
+    INTAN_config->obtained_RX[pckt_count] = rx_value;
+}
+
+
+
+void send_confirmation_values(INTAN_config_struct* INTAN_config){
     volatile uint16_t reg_config_num = INTAN_config->max_size;
     INTAN_config->array1[reg_config_num] = READ_ACTION;
     INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
@@ -127,12 +189,31 @@ void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* pa
     reg_config_num += 1;
  
     INTAN_config->max_size = reg_config_num;  
+}
+// Function used for sending SPI commands
 
+/*While not all the commands have been sent:
+    State 1:
+        Update the packets to be sent in state 2
+    State 2:
+        Send the 4 packets and save the received values in the arrays for checking the values
+
+  When all the commands have been sent:
+    Check that the received values are correct using the function for checking it. 
+    If the returned value of the function is false:
+        enter a while loop and turn on the led for the INTAN configuration warning
+    Else: exit the function
+
+  */  
+void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* packet_1, uint8_t* packet_2, uint8_t* packet_3, uint8_t* packet_4){
+
+    /*
+    Se añade a la lista de envíos dos dummies para que se puedan comprobar todas las recepciones tras los envíos.
+    Si no se hace esto entonces habría que implementar una lógica adicional de traslado de paquetes hacia el inicio de los que se han recibido y 
+    comprobarlo más adelante, aciendo que el fallo venga más tarde de lo deseado y pudiendo producir un error indeseado como una configuración mala.
+    */
+    send_confirmation_values(INTAN_config);
     uint16_t pckt_count = 0;
-    uint8_t rx_packet_1 = 1;
-    uint8_t rx_packet_2 = 2;
-    uint8_t rx_packet_3 = 3;
-    uint8_t rx_packet_4 = 4;
 
     while(pckt_count != INTAN_config->max_size){       
             
@@ -141,40 +222,16 @@ void send_SPI_commands(int state, INTAN_config_struct* INTAN_config, uint8_t* pa
             OFF_CS_pin();
             __delay_cycles(CLK_5_CYCLES);
 
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = INTAN_config->array1[pckt_count];
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            rx_packet_1=UCA0RXBUF;
-            __delay_cycles(CLK_2_CYCLES);
-
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = INTAN_config->array2[pckt_count];
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            rx_packet_2=UCA0RXBUF;
-            __delay_cycles(CLK_2_CYCLES);
-
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
-            UCA0TXBUF = INTAN_config->array3[pckt_count];
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            rx_packet_3=UCA0RXBUF;
-            __delay_cycles(CLK_2_CYCLES);
-
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
-            UCA0TXBUF = INTAN_config->array4[pckt_count];
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            rx_packet_4=UCA0RXBUF;
-            __delay_cycles(CLK_2_CYCLES);
-
+            send_values(INTAN_config, pckt_count);
+            
             __delay_cycles(CLK_10_CYCLES);
             ON_CS_pin();   
             
             __delay_cycles(CLK_5_CYCLES);
 
-            uint32_t rx_value = ((uint32_t)rx_packet_1 << 24) |
-                ((uint32_t)rx_packet_2 << 16) |
-                ((uint32_t)rx_packet_3 << 8)  |
-                ((uint32_t)rx_packet_4);
-            INTAN_config->obtained_RX[pckt_count] = rx_value;
+            if(INTAN_config->time_restriction[pckt_count]){
+                wait_1_second();
+            }
             pckt_count += 1;
         
     }
@@ -219,7 +276,17 @@ bool check_received_commands(INTAN_config_struct* INTAN_config){
                 }
             }
           
+        } else if (INTAN_config->instruction[index] == 'f') {
+            // Compare bit zero if has a value 1 this one is related to the reading of the register 50 fault current detector
+            if (INTAN_config->obtained_RX[0] & (1)) {
+                perror("Fault current detection.");
+                perror("Rewrite SPI commands or turn off.");
+                while(1);
+            }
+
         }
+
+
     }
 
     return true;
@@ -368,6 +435,8 @@ void fc_high(INTAN_config_struct* INTAN_config, char H_k, float_t freq){
 
     uint16_t RH1;
     uint16_t RH2;
+    
+
 
     switch (H_k) {
         case 'k':
@@ -500,12 +569,13 @@ void fc_high(INTAN_config_struct* INTAN_config, char H_k, float_t freq){
 
 }
 
-void fc_low_A(INTAN_config_struct* INTAN_config, float_t freq){
+void fc_low_A(INTAN_config_struct* INTAN_config){
     uint8_t RL_SEL1;
     uint8_t RL_SEL2;
     uint8_t RL_SEL3;
 
     uint16_t RL;
+    float_t freq = INTAN_config-> fc_low_A;
     if (freq == 1000.0f){
         RL_SEL1 = RL_SEL1_1k;
         RL_SEL2 = RL_SEL2_1k;
@@ -644,12 +714,15 @@ void fc_low_A(INTAN_config_struct* INTAN_config, float_t freq){
 
 }
 
-void fc_low_B(INTAN_config_struct* INTAN_config, float freq){
+void fc_low_B(INTAN_config_struct* INTAN_config){
     uint8_t RL_SEL1;
     uint8_t RL_SEL2;
     uint8_t RL_SEL3;
 
     uint16_t RL;
+
+    float_t freq = INTAN_config-> fc_low_B;
+
     if (freq == 1000.0f){
         RL_SEL1 = RL_SEL1_1k;
         RL_SEL2 = RL_SEL2_1k;
@@ -788,6 +861,44 @@ void fc_low_B(INTAN_config_struct* INTAN_config, float freq){
 
 }
 
+
+void power_up_AC(INTAN_config_struct* INTAN_config){
+    write_command(INTAN_config, ADC_INDIVIDUAL_AMP_POWER, 0xFFFF);
+}
+
+void A_or_B_cutoff_frequency(INTAN_config_struct* INTAN_config){
+    uint8_t i;
+    uint16_t amp_values = 0;
+    for (i = NUM_CHANNELS; i > 0; i--){
+        if(INTAN_config->amplfier_cutoff_frequency_A_B[i-1] == 'B'){
+            amp_values = amp_values | (1<<(i-1));
+        }
+    }
+    write_command(INTAN_config, AMP_LOW_CUTOFF_FREQ_SELECT, amp_values);
+    INTAN_config->waiting_trigger = true;
+}
+
+void amp_fast_settle(INTAN_config_struct* INTAN_config){
+    uint8_t i;
+    uint16_t amp_values = 0;
+    for (i = NUM_CHANNELS; i > 0; i--){
+        if(INTAN_config->amplfier_reset[i-1]){
+            amp_values = amp_values | (1<<(i-1));
+        }
+    }
+    uint16_t reg_config_num = INTAN_config->max_size;
+    INTAN_config->time_restriction[reg_config_num] = true;
+    write_command(INTAN_config, AMPLIFIER_FAST_SETTLE, amp_values);
+    INTAN_config->waiting_trigger = true;   
+}
+
+
+void amp_fast_settle_reset(INTAN_config_struct* INTAN_config){
+    write_command(INTAN_config, AMPLIFIER_FAST_SETTLE, 0x0000);
+}
+
+
+
 void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel){
     volatile uint16_t reg_config_num = INTAN_config->max_size;
     volatile uint8_t saved_value;
@@ -838,12 +949,14 @@ void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel){
 
 }
 
-void convert_N_channels(INTAN_config_struct* INTAN_config, uint8_t number_channels){
+void convert_N_channels(INTAN_config_struct* INTAN_config){
     volatile uint16_t reg_config_num = INTAN_config->max_size;
     volatile uint8_t saved_value; 
     volatile uint8_t Channel;
     uint8_t i;
     INTAN_config->max_size = reg_config_num;
+    uint8_t number_channels;
+    number_channels = INTAN_config->number_channels_to_convert;
     
     // Convert the first channel and then convert the N following channels
     Channel = INTAN_config->initial_channel_to_convert;
@@ -1205,599 +1318,216 @@ void impedance_check_DAC(INTAN_config_struct* INTAN_config){
 
 
 
+// Fault current detection
+void fault_current_detection(INTAN_config_struct* INTAN_config){
+    read_command(INTAN_config, FAULT_CURR_DET, 'f');
+}
 
 
+// Enabling and controlling the digital external outputs 
+void enable_digital_output_1(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout1HZ = 0;
+    write_register_1(INTAN_config);
+}
+void enable_digital_output_2(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout2HZ = 0;
+    write_register_1(INTAN_config);
+}
 
+// Disabling digital output 1 and 2
+void disable_digital_output_1(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout1HZ = 1;
+    write_register_1(INTAN_config);
+}
+void disable_digital_output_2(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout2HZ = 1;
+    write_register_1(INTAN_config);
+}
 
+// ON output 1 or 2
+void power_ON_output_1(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout1 = 1;
+    write_register_1(INTAN_config);
+}
+void power_ON_output_2(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout2 = 1;
+    write_register_1(INTAN_config);
+}
 
+// OFF output 1 or 2
+void power_OFF_output_1(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout1 = 0;
+    write_register_1(INTAN_config);
+}
+void power_OFF_output_2(INTAN_config_struct* INTAN_config){
+    INTAN_config->digout2 = 0;
+    write_register_1(INTAN_config);
+}
 
+// Compliment 2 enable and disable 
+void enable_C2(INTAN_config_struct* INTAN_config){
+    INTAN_config->C2_enabled = true;
+    write_register_1(INTAN_config);
+}
+void disable_C2(INTAN_config_struct* INTAN_config){
+    INTAN_config->C2_enabled = false;    
+    write_register_1(INTAN_config);
+}
 
+// Enabling and disabling absolute value configuration
+void enable_absolute_value(INTAN_config_struct* INTAN_config){
+    INTAN_config->abs_mode = true;    
+    write_register_1(INTAN_config);
+}
 
+void disable_absolute_value(INTAN_config_struct* INTAN_config){
+    INTAN_config->abs_mode = false;    
+    write_register_1(INTAN_config);
+}
 
+// Enable or disable the digital signal processing HPF
+void disable_digital_signal_processing_HPF(INTAN_config_struct* INTAN_config){
+    INTAN_config->DSPen = true;
+    write_register_1(INTAN_config);
+}
+void enable_digital_signal_processing_HPF(INTAN_config_struct* INTAN_config){
+    INTAN_config->DSPen = false;
+    write_register_1(INTAN_config);
+}
 
+// Digital signal processing filter HPF cutoff frequency configuration
+void DSP_cutoff_frequency_configuration(INTAN_config_struct* INTAN_config){
+    float_t f_sampling;
+    f_sampling = INTAN_config->ADC_sampling_rate/INTAN_config->number_channels_to_convert; 
+    float_t K;
+    K = INTAN_config->DSP_cutoff_freq/f_sampling;
+    if (K>=0.1103){
+        INTAN_config->DSP_cutoff_freq_register = 1;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Splits a 16-bit value into two 8-bit values.
- *
- * @param input     The 16-bit input value.
- * @param high_byte Pointer to store the high (most significant) 8 bits.
- * @param low_byte  Pointer to store the low (least significant) 8 bits.
- */
-void split_uint16(uint16_t input, uint8_t* high_byte, uint8_t* low_byte) {
-    if (high_byte) {
-        *high_byte = (input >> 8) & 0xFF;  // Get the upper 8 bits
+    }else if (K >= 0.04579 & K < 0.1103) {
+        INTAN_config->DSP_cutoff_freq_register = 2;    
+    
+    }else if (K >= 0.02125 & K < 0.04579) {
+        INTAN_config->DSP_cutoff_freq_register = 3;    
+    
+    }else if (K >= 0.01027 & K < 0.02125) {
+        INTAN_config->DSP_cutoff_freq_register = 4;  
+         
+    }else if (K >= 0.005053 & K < 0.01027) {
+        INTAN_config->DSP_cutoff_freq_register = 5;    
+    
+    }else if (K >= 0.002506 & K < 0.005053) {
+        INTAN_config->DSP_cutoff_freq_register = 6;    
+    
+    }else if (K >= 0.001248 & K < 0.002506) {
+        INTAN_config->DSP_cutoff_freq_register = 7;    
+    
+    }else if (K >= 0.0006229 & K < 0.001248) {
+        INTAN_config->DSP_cutoff_freq_register = 8;    
+    }else if (K >= 0.0003112 & K < 0.0006229) {
+        INTAN_config->DSP_cutoff_freq_register = 9;    
+    }else if (K >= 0.0001555 & K < 0.0003112) {
+        INTAN_config->DSP_cutoff_freq_register = 10;    
+    }else if (K >= 0.00007773 & K < 0.0001555) {
+        INTAN_config->DSP_cutoff_freq_register = 11;    
+    }else if (K >= 0.00003886 & K < 0.00007773) {
+        INTAN_config->DSP_cutoff_freq_register = 12;    
+    }else if (K >= 0.00001943 & K < 0.00003886) {
+        INTAN_config->DSP_cutoff_freq_register = 13;    
+    }else if (K >= 0.000009714 & K < 0.00001943) {
+        INTAN_config->DSP_cutoff_freq_register = 14;    
+    }else if (K >= 0.000004857 & K < 0.000009714) {
+        INTAN_config->DSP_cutoff_freq_register = 15;    
+    }else if (K < 0.000004857) {
+        INTAN_config->DSP_cutoff_freq_register = 15;
     }
-    if (low_byte) {
-        *low_byte = input & 0xFF;          // Get the lower 8 bits
-    }
-}
-
-uint8_t calculate_current_lim_chr_recov(float target_voltage){
-    if ((target_voltage > 1.225)||((target_voltage < -1.225))){
-        return 0;
-    }
-    uint8_t dac_value = (uint8_t)roundf((target_voltage / 0.00957f) + 128.0f);
-    return dac_value;
-}
-
-uint8_t calculate_stim_current(INTAN_config_struct* INTAN_config, uint16_t I_target_nA){
-    uint8_t magnitude = (uint8_t)(I_target_nA / INTAN_config->step_sel);
-    return magnitude;
+    write_register_1(INTAN_config);
 }
 
 
-void create_example_SPI_arrays(INTAN_config_struct* INTAN_config){
-    uint8_t step_H;
-    uint8_t step_L;
-    split_uint16(step_sel_united(INTAN_config->step_sel), &step_H, &step_L);
+// Write in register 1 the cutoff frequency of the digital signal processing HPF
 
-    uint16_t BiasVol; 
-    BiasVol = vias_voltages_sel(INTAN_config->step_sel);
+void write_register_1(INTAN_config_struct* INTAN_config){
+    uint16_t DATA = 
+    ((uint16_t)INTAN_config->digoutOD   << 12) |
+    ((uint16_t)INTAN_config->digout2    << 11) |
+    ((uint16_t)INTAN_config->digout2HZ  << 10) |
+    ((uint16_t)INTAN_config->digout1    << 9)  |
+    ((uint16_t)INTAN_config->digout1HZ  << 8)  |
+    ((uint16_t)INTAN_config->weak_MISO  << 7)  |
+    ((uint16_t)INTAN_config->C2_enabled << 6)  |
+    ((uint16_t)INTAN_config->abs_mode   << 5)  |
+    ((uint16_t)INTAN_config->DSPen      << 4)  |
+    ((uint16_t)INTAN_config->DSP_cutoff_freq_register);
+    write_command(INTAN_config, REGISTER_1, DATA);
+}
 
-    uint8_t dac_value;
-    dac_value = calculate_current_lim_chr_recov(INTAN_config->target_voltage);
+// Minimum power disipation writting FFFF in register 38: error in hardware produces that this register must be all ones.
 
-    uint8_t CL_H;
-    uint8_t CL_L;
-    split_uint16(chrg_recov_curr_lim_united(INTAN_config->CL_sel), &CL_H, &CL_L);
+void minimum_power_disipation(INTAN_config_struct* INTAN_config){
 
-
-
-    uint16_t reg_config_num = 0;
-
-    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
-    INTAN_config->array1[reg_config_num] = READ_ACTION;
-    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
+    write_command(INTAN_config, DC_AMPLIFIER_POWER, 0xFFFF);
     
-    // Testing -- it will be deleted
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
-    INTAN_config->array3[reg_config_num] = VALUES_VALUE_TEST_H;
-    INTAN_config->array4[reg_config_num] = VALUES_VALUE_TEST_L;
-    reg_config_num++;
+    write_command(INTAN_config, CH0_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH1_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH2_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH3_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH4_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH5_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH6_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH7_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH8_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH9_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH10_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH11_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH12_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH13_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH14_NEG_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH15_NEG_CURR_MAG, 0x0000);
     
-    //REGISTER 32: Enable - disable stimulation
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A_reg;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
+    write_command(INTAN_config, CH0_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH1_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH2_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH3_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH4_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH5_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH6_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH7_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH8_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH9_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH10_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH11_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH12_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH13_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH14_POS_CURR_MAG, 0x0000);
+    write_command(INTAN_config, CH15_POS_CURR_MAG, 0x0000);
 
-    //REGISTER 33: Enable - disable stimulation
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B_reg;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
+    // Charge recovery current limitto 1 nA
+    INTAN_config->current_recovery = 1;
+    charge_recovery_current_configuration(INTAN_config);
 
-    //REGISTER 34: Stimulation Current Step Size
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_STEP_SIZE;
-    INTAN_config->array3[reg_config_num] = step_H;
-    INTAN_config->array4[reg_config_num] = step_L;
-    reg_config_num++;
-
-    //REGISTER 35: Stimulation Bias Voltages
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_BIAS_VOLTAGE;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = BiasVol;
-    reg_config_num++;
-
-    //REGISTER 36: Current-Limited Charge Recovery Target Voltage
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = dac_value;
-    reg_config_num++;
-    
-    //REGISTER 37: Charge Recovery Current Limit
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CHARGE_RECOVERY_CURRENT_LIMIT;
-    INTAN_config->array3[reg_config_num] = CL_H;
-    INTAN_config->array4[reg_config_num] = CL_L;
-    reg_config_num++;
-
-    //REGISTER 38: Individual DC Amplifier Power
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = DC_AMPLIFIER_POWER;
-    INTAN_config->array3[reg_config_num] = ONES_8;
-    INTAN_config->array4[reg_config_num] = ONES_8;
-    reg_config_num++;
-
-    //REGISTER 40: Compliance Monitor (READ ONLY REGISTER WITH CLEAR)  - write action with clear
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_M;
-    INTAN_config->array2[reg_config_num] = COMPLIANCE_MONITOR;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
+    // stimulation current step
+    INTAN_config->step_DAC = 10;
+    stim_step_DAC_configuration(INTAN_config);
 
 
-    //REGISTER 40: Compliance Monitor (READ ONLY REGISTER WITH CLEAR)  - read action
-    INTAN_config->array1[reg_config_num] = READ_ACTION;
-    INTAN_config->array2[reg_config_num] = COMPLIANCE_MONITOR;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
+    // Second AC amplifier lower cutoff frequency
+    INTAN_config->fc_low_B = 0.1f;
+    fc_low_B(INTAN_config);
 
-    //REGISTER 40: Compliance Monitor (READ ONLY REGISTER WITH CLEAR)  - read action with clear
-    INTAN_config->array1[reg_config_num] = READ_ACTION_M;
-    INTAN_config->array2[reg_config_num] = COMPLIANCE_MONITOR;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
-
-    //REGISTER 42: Stimulator On-Off (TRIGGERED REGISTER) - stimulation OFF
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = STIM_ON;
-    INTAN_config->array3[reg_config_num] = ALL_CH_OFF;
-    INTAN_config->array4[reg_config_num] = ALL_CH_OFF;
-    reg_config_num++;
-
-    //REGISTER 42: Stimulator On (TRIGGERED REGISTER) - stimulation ON in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = STIM_ON;
-    INTAN_config->array3[reg_config_num] = CH_2_ON_L+CH_7_ON_L;
-    INTAN_config->array4[reg_config_num] = CH_12_ON_H;
-    reg_config_num++;
-
-
-    //REGITER 44: Stimulator Polarity (TRIGGERED REGISTER) - stimulation positive in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = STIM_POLARITY;
-    INTAN_config->array3[reg_config_num] = CH_2_ON_L+CH_7_ON_L;
-    INTAN_config->array4[reg_config_num] = CH_12_ON_H;
-    reg_config_num++;
-
-
-
-    //REGISTER 46: Charge Recovery Switch (TRIGGERED REGISTER) - activated in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CHRG_RECOV_SWITCH;
-    INTAN_config->array3[reg_config_num] = CH_2_ON_L+CH_7_ON_L;
-    INTAN_config->array4[reg_config_num] = CH_12_ON_H;
-    reg_config_num++;
-
-    //REGISTER 48: Current-Limited Charge Recovery Enable (TRIGGERED REGISTER) - activated in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CURR_LIM_CHRG_RECOV_EN;
-    INTAN_config->array3[reg_config_num] = CH_2_ON_L+CH_7_ON_L;
-    INTAN_config->array4[reg_config_num] = CH_12_ON_H;
-    reg_config_num++;
-
-    //REGISTER 50:  Fault Current Detector (READ ONLY REGISTER) -
-    // si se lee un valor de corriente peligroso, se podría realizar alguna acción que (por ejemplo) deshabilite la estimulación
-    INTAN_config->array1[reg_config_num] = READ_ACTION;
-    INTAN_config->array2[reg_config_num] = FAULT_CURR_DET;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
-
-
-
-    uint8_t negative_current;
-    negative_current = calculate_stim_current(INTAN_config, 1000);
-
-    uint8_t trim_neg;
-    trim_neg = 0;
+    // Power down un used AC amplifiers
+    write_command(INTAN_config, ADC_INDIVIDUAL_AMP_POWER, 0x0000);
 
     
-    //REGISTER 64-79: Negative Stimulation Current Magnitude (TRIGGERED REGISTERS) - config ch 0 
-    //Utiliza el valor de la configuración que hay en el step size,
-    // si queremos utilizar un valor diferente habría que actualizarlo antes de utilizarlo
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CH0_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = trim_neg;
-    INTAN_config->array4[reg_config_num] = negative_current;
-    reg_config_num++;
 
 
 
-    uint8_t positive_current;
-    positive_current = calculate_stim_current(INTAN_config, 1000);
 
-    uint8_t trim_pos;
-    trim_pos= 0;
-    
-    //REGISTER 96-111: Positive Stimulation Current Magnitude (TRIGGERED REGISTERS)  - config ch 0 
-    //Utiliza el valor de la configuración que hay en el step size,
-    // si queremos utilizar un valor diferente habría que actualizarlo antes de utilizarlo
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CH0_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = trim_pos;
-    INTAN_config->array4[reg_config_num] = positive_current;
-    reg_config_num++;
 
-    INTAN_config->max_size = reg_config_num;
 
 }
 
 
-void create_stim_SPI_arrays(INTAN_config_struct* INTAN_config){
-    uint8_t step_H;
-    uint8_t step_L;
-    split_uint16(step_sel_united(INTAN_config->step_sel), &step_H, &step_L);
-
-    uint16_t BiasVol; 
-    BiasVol = vias_voltages_sel(INTAN_config->step_sel);
-
-    uint8_t dac_value;
-    dac_value = calculate_current_lim_chr_recov(INTAN_config->target_voltage);
-
-    uint8_t CL_H;
-    uint8_t CL_L;
-    split_uint16(chrg_recov_curr_lim_united(INTAN_config->CL_sel), &CL_H, &CL_L);
-
-    uint8_t CH_ON_selected_L = CH_2_ON_L+CH_7_ON_L;
-    uint8_t CH_ON_selected_H = CH_12_ON_H;
-
-    uint16_t reg_config_num = 0;
-    
-    //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
-    INTAN_config->array1[reg_config_num] = READ_ACTION;
-    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
-
-    //2.  Asegurar que la estimulación está deshabilitada
-    //REGISTER 32: Enable - disable stimulation
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A_reg;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
-
-    //REGISTER 33: Enable - disable stimulation
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B_reg;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
-
-    //3.  Encender todos los amplificadores de baja ganancia con acoplamiento DC para evitar un consumo excesivo de energía a causa de un error de HW
-    // Si está a cero, se consumen 30.9mA adicionales de VDD
-    //REGISTER 38: Individual DC Amplifier Power
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = DC_AMPLIFIER_POWER;
-    INTAN_config->array3[reg_config_num] = ONES_8;
-    INTAN_config->array4[reg_config_num] = ONES_8;
-    reg_config_num++;
-
-    // hay un monton de pasos entre medias relacionados con la parte de los ADC que vamos a ignorar... de momento
-    
-    //4.  Configurar el tamaño de paso de estimulacion (34)
-    //REGISTER 34: Stimulation Current Step Size
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_STEP_SIZE;
-    INTAN_config->array3[reg_config_num] = step_H;
-    INTAN_config->array4[reg_config_num] = step_L;
-    reg_config_num++;
-
-    //5.  Establecer voltajes de polarizacion de estimulacion para el paso establecido en el registro 34 (35)
-    //REGISTER 35: Stimulation Bias Voltages
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_BIAS_VOLTAGE;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = BiasVol;
-    reg_config_num++;
-    
-    //6.  Establecer el voltaje objetivo de recuperacion de carga limitada en corriente (36)
-    //REGISTER 36: Current-Limited Charge Recovery Target Voltage
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = dac_value;
-    reg_config_num++;    
-    
-    //7.  Establecer el límite de corriente de recuperación de carga (37)
-    //REGISTER 37: Charge Recovery Current Limit
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = CHARGE_RECOVERY_CURRENT_LIMIT;
-    INTAN_config->array3[reg_config_num] = CL_H;
-    INTAN_config->array4[reg_config_num] = CL_L;
-    reg_config_num++;
-
-    //8.  Apagar todos los estimuladores (con U activa) (42)
-    //REGISTER 42: Stimulator On-Off (TRIGGERED REGISTER) - stimulation OFF
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = STIM_ON;
-    INTAN_config->array3[reg_config_num] = ALL_CH_OFF;
-    INTAN_config->array4[reg_config_num] = ALL_CH_OFF;
-    reg_config_num++;
-
-    //9.  Establece todos los estimuladores en polaridad negativa (44)
-    //REGITER 44: Stimulator Polarity (TRIGGERED REGISTER) - stimulation positive in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = STIM_POLARITY;
-    INTAN_config->array3[reg_config_num] = CH_ON_selected_H;
-    INTAN_config->array4[reg_config_num] = CH_ON_selected_L;
-    reg_config_num++;
-
-    //10. Abre todos los interruptores de recuperación de carga (46)
-    //REGISTER 46: Charge Recovery Switch (TRIGGERED REGISTER) - activated in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CHRG_RECOV_SWITCH;
-    INTAN_config->array3[reg_config_num] = CH_ON_selected_H;
-    INTAN_config->array4[reg_config_num] = CH_ON_selected_L;
-    reg_config_num++;
-
-    //11. Abre todos los interruptores de recuperación de carga limitada en corriente (48)
-    //REGISTER 48: Current-Limited Charge Recovery Enable (TRIGGERED REGISTER) - activated in 3 different registers
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CURR_LIM_CHRG_RECOV_EN;
-    INTAN_config->array3[reg_config_num] = CH_ON_selected_H;
-    INTAN_config->array4[reg_config_num] = CH_ON_selected_L;
-    reg_config_num++;
-
-    //12. Establece las corrientes negativas de estimulacion en cero centrando los ajustes de corriente (64...)
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH0_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-    
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH1_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH2_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH3_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH4_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH5_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH6_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH7_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH8_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH9_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH10_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH11_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH12_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH13_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH14_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH15_NEG_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    //13. Establece las corrientes positivas de estimulacion en cero centrando los ajustes de corriente (96...)
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH0_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-    
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH1_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH2_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH3_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH4_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH5_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH6_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH7_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH8_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH9_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH10_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH11_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH12_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH13_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH14_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
-    INTAN_config->array2[reg_config_num] = CH15_POS_CURR_MAG;
-    INTAN_config->array3[reg_config_num] = 0x80;
-    INTAN_config->array4[reg_config_num] = 0x00;
-    reg_config_num++;
-    
-    
-    //14. Habilitar la estimulacion de los estimuladores (32, 33)
-    //REGISTER 32: Enable - disable stimulation
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_A_reg;
-    INTAN_config->array3[reg_config_num] = STIM_ENABLE_A_VALUE_H;
-    INTAN_config->array4[reg_config_num] = STIM_ENABLE_A_VALUE_L;
-    reg_config_num++;
-
-    //REGISTER 33: Enable - disable stimulation
-    INTAN_config->array1[reg_config_num] = WRITE_ACTION;
-    INTAN_config->array2[reg_config_num] = STIM_ENABLE_B_reg;
-    INTAN_config->array3[reg_config_num] = STIM_ENABLE_B_VALUE_H;
-    INTAN_config->array4[reg_config_num] = STIM_ENABLE_B_VALUE_L;
-    reg_config_num++;
-
-    //15. Comando ficticio con flag M activado para limpiar el monitor de conformidad (255 - register value test)
-    INTAN_config->array1[reg_config_num] = READ_ACTION_M;
-    INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
-    INTAN_config->array3[reg_config_num] = ZEROS_8;
-    INTAN_config->array4[reg_config_num] = ZEROS_8;
-    reg_config_num++;
-
-    INTAN_config->max_size = reg_config_num;
-
-}
-
-
-void update_packets(uint16_t pckt_count, uint8_t* val1, uint8_t* val2, uint8_t* val3, uint8_t* val4, INTAN_config_struct* INTAN_config) {
-    
-    // Retrieve values from each array at the given index
-    *val1 = INTAN_config->array1[pckt_count];
-    *val2 = INTAN_config->array2[pckt_count];
-    *val3 = INTAN_config->array3[pckt_count];
-    *val4 = INTAN_config->array4[pckt_count];
-}
 
 void wait_5_CYCLES(){
     __delay_cycles(CLK_5_CYCLES);
