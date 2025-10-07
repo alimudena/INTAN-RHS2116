@@ -44,19 +44,19 @@ void send_values(INTAN_config_struct* INTAN_config, uint16_t pckt_count){
     UCA0TXBUF = INTAN_config->array1[pckt_count];
     while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_1=UCA0RXBUF;
-    // __delay_cycles(CLK_2_CYCLES);
+    __delay_cycles(CLK_2_CYCLES);
 
     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
     UCA0TXBUF = INTAN_config->array2[pckt_count];
     while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_2=UCA0RXBUF;
-    // __delay_cycles(CLK_2_CYCLES);
+    __delay_cycles(CLK_2_CYCLES);
 
     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
     UCA0TXBUF = INTAN_config->array3[pckt_count];
     while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_3=UCA0RXBUF;
-    // __delay_cycles(CLK_2_CYCLES);
+    __delay_cycles(CLK_2_CYCLES);
 
     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
     UCA0TXBUF = INTAN_config->array4[pckt_count];
@@ -83,6 +83,7 @@ void send_confirmation_values(INTAN_config_struct* INTAN_config){
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
     reg_config_num += 1;
 
     INTAN_config->array1[reg_config_num] = READ_ACTION;
@@ -90,6 +91,7 @@ void send_confirmation_values(INTAN_config_struct* INTAN_config){
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
     reg_config_num += 1;
     
     INTAN_config->array1[reg_config_num] = READ_ACTION;
@@ -97,6 +99,7 @@ void send_confirmation_values(INTAN_config_struct* INTAN_config){
     INTAN_config->array3[reg_config_num] = ZEROS_8;
     INTAN_config->array4[reg_config_num] = ZEROS_8;
     INTAN_config->expected_RX[reg_config_num] = CHIP_ID;
+    INTAN_config->expected_RX_bool[reg_config_num] = 0;
     reg_config_num += 1;
  
     INTAN_config->max_size = reg_config_num;  
@@ -152,12 +155,12 @@ void clear_command(INTAN_config_struct* INTAN_config){
     INTAN_config->array4[reg_config_num] = ZEROS_8;
 
 
-    if (INTAN_config->C2_enabled == false){
+    if (INTAN_config->C2_enabled == true){
         INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
     } else{
         INTAN_config->expected_RX[reg_config_num] = RETURN_CLEAR_2C;
     }
-    INTAN_config->expected_RX_bool[reg_config_num] = 0;
+    INTAN_config->expected_RX_bool[reg_config_num] = 1;
     INTAN_config->instruction[reg_config_num] = 'L';
 
 

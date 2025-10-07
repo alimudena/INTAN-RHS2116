@@ -149,14 +149,14 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
             // wait_1_second();
             
             OFF_CS_pin();
-            __delay_cycles(CLK_5_CYCLES);
+            // __delay_cycles(CLK_5_CYCLES);
 
             send_values(INTAN_config, pckt_count);
             
-            __delay_cycles(CLK_10_CYCLES);
+            __delay_cycles(CLK_2_CYCLES);
             ON_CS_pin();   
             
-            __delay_cycles(CLK_5_CYCLES);
+            __delay_cycles(CLK_2_CYCLES);
 
             if(INTAN_config->time_restriction[pckt_count]){
                 wait_1_second();
@@ -181,7 +181,7 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
 bool check_received_commands(INTAN_config_struct* INTAN_config){
     uint16_t index;
     // If the value to be compared actually does not mean anything (as if it a read function) return true
-    for (index = 0; index < INTAN_config->max_size-1; index++){
+    for (index = 0; index < INTAN_config->max_size-2; index++){ //-2 because 2 extra packets are sent
         if (INTAN_config->expected_RX_bool[index] == 1) {       
             if (index+2 >= MAX_VALUES){
                 // Failure because more than the expected values have been sent and there is an index out of bounds.
@@ -1048,11 +1048,11 @@ void power_OFF_output_2(INTAN_config_struct* INTAN_config){
 
 // Compliment 2 enable and disable 
 void enable_C2(INTAN_config_struct* INTAN_config){
-    INTAN_config->C2_enabled = true;
+    INTAN_config->C2_enabled = 0;
     write_register_1(INTAN_config);
 }
 void disable_C2(INTAN_config_struct* INTAN_config){
-    INTAN_config->C2_enabled = false;    
+    INTAN_config->C2_enabled = 1;    
     write_register_1(INTAN_config);
 }
 

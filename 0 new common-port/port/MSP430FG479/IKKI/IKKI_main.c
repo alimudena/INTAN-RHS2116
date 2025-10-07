@@ -610,18 +610,18 @@ int main(void) {
 
           // check_compliance_monitor(&INTAN_config);
 
-          power_up_AC(&INTAN_config);
+          // power_up_AC(&INTAN_config);
 
-          INTAN_config.amplifier_cutoff_frequency_A_B[0] = 'B';
-          INTAN_config.amplifier_cutoff_frequency_A_B[8] = 'B';
-          A_or_B_cutoff_frequency(&INTAN_config);
+          // INTAN_config.amplifier_cutoff_frequency_A_B[0] = 'B';
+          // INTAN_config.amplifier_cutoff_frequency_A_B[8] = 'B';
+          // A_or_B_cutoff_frequency(&INTAN_config);
 
-          INTAN_config.amplfier_reset[5] = true;
-          amp_fast_settle(&INTAN_config);
+          // INTAN_config.amplfier_reset[5] = true;
+          // amp_fast_settle(&INTAN_config);
 
-          A_or_B_cutoff_frequency(&INTAN_config);
+          // A_or_B_cutoff_frequency(&INTAN_config);
 
-          amp_fast_settle_reset(&INTAN_config);
+          // amp_fast_settle_reset(&INTAN_config);
 
 
           state = 1;
