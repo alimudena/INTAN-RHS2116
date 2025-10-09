@@ -20,7 +20,7 @@
 #define CLK_5_CYCLES 5
 #define CLK_10_CYCLES 10
 #define CLK_50_CYCLES 50
-#define NUM_STIM_EXP 5
+
 
 #define NUM_CHANNELS 16
 
@@ -109,6 +109,7 @@ typedef struct{
 
     bool stimulation_on[NUM_CHANNELS];
     char stimulation_pol[NUM_CHANNELS];
+    
 
     } INTAN_config_struct;
 
@@ -155,6 +156,10 @@ void stimulation_polarity(INTAN_config_struct* INTAN_config);
 // Writting in the registers 32 and 33 values for enabling and disabling the stimulation
 void stimulation_disable(INTAN_config_struct* INTAN_config);
 void stimulation_enable(INTAN_config_struct* INTAN_config);
+
+
+void ON(INTAN_config_struct* INTAN_config);
+void OFF(INTAN_config_struct* INTAN_config);
 
 /*
     COMPLIANCE MONITOR

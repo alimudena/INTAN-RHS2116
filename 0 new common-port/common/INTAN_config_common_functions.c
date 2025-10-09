@@ -856,6 +856,52 @@ void stimulation_enable(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, STIM_ENABLE_B_reg, STIM_ENABLE_B_VALUE);
 }
 
+
+void ON(INTAN_config_struct* INTAN_config){
+
+    /*
+            CONSTANT CURRENT STIMULATOR
+    */
+    stimulation_enable(INTAN_config);
+
+    send_SPI_commands(INTAN_config);
+
+    /*
+            COMPLIANCE MONITOR
+    */
+    enable_U_flag(INTAN_config);
+    clean_compliance_monitor(INTAN_config);
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    /*
+            CONSTANT CURRENT STIMULATOR // positive polarity
+    */
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+
+
+    // stimulators on
+    stimulation_on(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+
+
+    /*
+            U AND M FLAGS
+    */
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+}
+
+OFF(INTAN_config_struct* INTAN_config){
+    stimulation_disable(INTAN_config);
+    send_SPI_commands(INTAN_config);
+}
+
 // Clean the compliance monitor register
 void clean_compliance_monitor(INTAN_config_struct* INTAN_config){
     enable_M_flag(INTAN_config);
