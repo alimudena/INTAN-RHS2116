@@ -19,6 +19,7 @@
 #define CLK_2_CYCLES 2
 #define CLK_5_CYCLES 5
 #define CLK_10_CYCLES 10
+#define CLK_50_CYCLES 50
 #define NUM_STIM_EXP 5
 
 #define NUM_CHANNELS 16
@@ -164,7 +165,7 @@ void check_compliance_monitor(INTAN_config_struct* INTAN_config);
 */
 // Connect the electrode to the gnd reference electrode
 void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel);
-
+void disconnect_channels_from_gnd(INTAN_config_struct* INTAN_config);
 
 /*
     CURRENT LIMITED CHARGE RECOVERY CIRCUIT
@@ -172,6 +173,9 @@ void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel);
 // Current-limited charge recovery circuit voltage and current configuration
 void charge_recovery_current_configuration(INTAN_config_struct* INTAN_config);
 void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config);
+void enable_charge_recovery_sw(INTAN_config_struct* INTAN_config, uint8_t channel);
+void disable_charge_recovery_sw(INTAN_config_struct* INTAN_config);
+
 
 /*
     FAULT CURRENT DETECTION

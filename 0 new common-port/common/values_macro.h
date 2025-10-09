@@ -234,7 +234,7 @@
 #define PBIAS_500nA  9
 #define PBIAS_1uA    10
 #define PBIAS_2uA    11
-#define PBIAS_5uA    4
+#define PBIAS_5uA    14
 #define PBIAS_10uA   15
 
 //NBIAS
@@ -246,7 +246,7 @@
 #define NBIAS_500nA  9
 #define NBIAS_1uA    10
 #define NBIAS_2uA    11
-#define NBIAS_5uA    4
+#define NBIAS_5uA    14
 #define NBIAS_10uA   15
 
 

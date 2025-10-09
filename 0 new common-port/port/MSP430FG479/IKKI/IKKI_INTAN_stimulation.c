@@ -143,80 +143,160 @@ int main(void) {
       bool next_stim = button_pressed();
       if(next_stim == true){
 
-        initialize_INTAN(&INTAN_config);
-        check_intan_SPI_array(&INTAN_config);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
+//         initialize_INTAN(&INTAN_config);
+//         check_intan_SPI_array(&INTAN_config); // 0x20 0x20 0x20
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_50_CYCLES);
 
-        disable_C2(&INTAN_config);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
+//         disable_C2(&INTAN_config); // 0x40
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_50_CYCLES);
 
-        clear_command(&INTAN_config);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
+//         clear_command(&INTAN_config); //0b1000 0000 0000 0000
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_50_CYCLES);
 
-        minimum_power_disipation(&INTAN_config);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
+        // minimum_power_disipation(&INTAN_config); // muchas cosas
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
 
-        stimulation_disable(&INTAN_config);
-        read_command(&INTAN_config, REGISTER_1, 'G');
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
+        // stimulation_disable(&INTAN_config); // 0x0000 0x0000
+        // read_command(&INTAN_config, REGISTER_1, 'G');
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
 
-        INTAN_config.step_DAC = 5000;
-        stim_PNBIAS_configuration(&INTAN_config);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
 
-        /*
-          REGISTRO 0X22 NO CONSIGO ESCRIBIR EN ÉL
-        */
-        // stim_step_DAC_configuration(&INTAN_config);
-        // send_SPI_commands(&INTAN_config);
-        // __delay_cycles(CLK_10_CYCLES);
+        // INTAN_config.step_DAC = 5000;
+        // stim_PNBIAS_configuration(&INTAN_config); //0x0e 0x0e
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+
+        // stim_step_DAC_configuration(&INTAN_config); //0x00 0x00 0x00 0x38
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+
+        // INTAN_config.current_recovery = 1;
+        // INTAN_config.voltage_recovery = 0;
+        // charge_recovery_current_configuration(&INTAN_config); // 0b0100 1111 0000 0000
+        // charge_recovery_voltage_configuration(&INTAN_config); // 0x00
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+    
+
+        // uint8_t stim_channel = 0;
+
+
+        // for (i = NUM_CHANNELS; i > 0; i--){
+        //   INTAN_config.stimulation_on[i-1] = 0;
+        //   INTAN_config.stimulation_pol[i-1] = 'P';
+        // }
+        // INTAN_config.stimulation_on[stim_channel] = 1;
+        // stimulation_on(&INTAN_config);
+        // stimulation_polarity(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+        // connect_channel_to_gnd(&INTAN_config, 0);
+        // enable_U_flag(&INTAN_config);
+        // read_command(&INTAN_config, REGISTER_1, 'u');
+        // disable_U_flag(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+        // disconnect_channels_from_gnd(&INTAN_config);
+        // enable_U_flag(&INTAN_config);
+        // read_command(&INTAN_config, REGISTER_1, 'u');
+        // disable_U_flag(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+        // disable_charge_recovery_sw(&INTAN_config);
+        // enable_U_flag(&INTAN_config);
+        // read_command(&INTAN_config, REGISTER_1, 'u');
+        // disable_U_flag(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+
+
+        // read_command(&INTAN_config, STIM_BIAS_VOLTAGE, 'G');
+        // read_command(&INTAN_config, STIM_STEP_SIZE, 'G');
+// send_SPI_commands(&INTAN_config);
+        // __delay_cycles(CLK_50_CYCLES);
+
+
+//         uint8_t neg_current_mag = 100;
+//         uint8_t neg_current_trim = 128;
+//         uint8_t pos_current_mag = 100;
+//         uint8_t pos_current_trim = 128;     
+
+
+
+//         stim_current_channel_configuration(&INTAN_config, stim_channel, neg_current_trim, neg_current_mag, pos_current_trim, pos_current_mag);
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_10_CYCLES);
+
+
+
+//         enable_M_flag(&INTAN_config);
+//         enable_U_flag(&INTAN_config);
+//         read_command(&INTAN_config, REGISTER_1, 'G');
+//         disable_M_flag(&INTAN_config);
+//         disable_U_flag(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_10_CYCLES);
+
+//         for (i = 0; i<NUM_CHANNELS; i++) {
+//           read_command(&INTAN_config, 64+i, 'G');      
+//         }
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_10_CYCLES);
+//         read_command(&INTAN_config, 96+stim_channel, 'G');
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_10_CYCLES);
+
+
+//         disable_charge_recovery_sw(&INTAN_config);
+//         enable_U_flag(&INTAN_config);
+//         read_command(&INTAN_config, REGISTER_1, 'u');
+//         disable_U_flag(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_50_CYCLES);
+        
+//         INTAN_config.stimulation_pol[stim_channel] = 'P';
+//         stimulation_polarity(&INTAN_config);
+//         stimulation_enable(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_1_S_CYCLES);
 
         
-        stimulation_on(&INTAN_config);
-        stimulation_polarity(&INTAN_config);
-        uint8_t stim_channel = 0;
-        uint8_t neg_current_mag = 100;
-        uint8_t neg_current_trim = 128;
-        uint8_t pos_current_mag = 200;
-        uint8_t pos_current_trim = 128;
-        stim_current_channel_configuration(&INTAN_config, stim_channel, neg_current_trim, neg_current_mag, pos_current_trim, pos_current_mag);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
+//         INTAN_config.stimulation_pol[stim_channel] = 'N';
+//         stimulation_polarity(&INTAN_config);
+// send_SPI_commands(&INTAN_config);
+//         __delay_cycles(CLK_3_S_CYCLES);
 
 
 
-        /* READ OR CLEAR - ESCOGER*/
-        enable_M_flag(&INTAN_config);
-        enable_U_flag(&INTAN_config);
-        read_command(&INTAN_config, REGISTER_1, 'G');
-        disable_M_flag(&INTAN_config);
-        disable_U_flag(&INTAN_config);
-        send_SPI_commands(&INTAN_config);
-        __delay_cycles(CLK_10_CYCLES);
 
 
-        while(1){
-          if (stimulate){
-            stimulation_enable(&INTAN_config);
-            __delay_cycles(CLK_30_S_CYCLES);
-          }else{
-            stimulation_disable(&INTAN_config);
-            __delay_cycles(CLK_5_M_CYCLES);
-          }
-          stimulate = !stimulate;
-          __delay_cycles(CLK_1_S_CYCLES);
-        }
 
 
-        while(next_stim == true){
-          next_stim = button_pressed();
-        }
+        // while(1){
+        //   if (stimulate){
+        //     stimulation_enable(&INTAN_config);
+        //     send_SPI_commands(&INTAN_config);
+        //     __delay_cycles(CLK_3_S_CYCLES);
+        //   }else{
+        //     stimulation_disable(&INTAN_config);
+        //     send_SPI_commands(&INTAN_config);
+        //     __delay_cycles(CLK_3_S_CYCLES);
+        //   }
+        //   stimulate = !stimulate;
+        //   __delay_cycles(CLK_1_S_CYCLES);
+        // }
+
       }
     }
 }

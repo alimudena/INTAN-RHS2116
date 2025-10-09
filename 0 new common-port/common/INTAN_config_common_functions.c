@@ -149,14 +149,14 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
             // wait_1_second();
             
             OFF_CS_pin();
-            // __delay_cycles(CLK_5_CYCLES);
+            __delay_cycles(CLK_5_CYCLES);
 
             send_values(INTAN_config, pckt_count);
             
-            __delay_cycles(CLK_2_CYCLES);
+            __delay_cycles(CLK_5_CYCLES);
             ON_CS_pin();   
             
-            __delay_cycles(CLK_2_CYCLES);
+            __delay_cycles(CLK_10_CYCLES);
 
             if(INTAN_config->time_restriction[pckt_count]){
                 wait_1_second();
@@ -169,7 +169,8 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
     bool checked_rcvd = check_received_commands(INTAN_config);
     if (!checked_rcvd){
         // while(1){
-            ON_INTAN_LED();
+            // ON_INTAN_LED();
+            perror("ERROR RECEIVING.");
         // }
     }else{
          OFF_INTAN_LED();
@@ -872,6 +873,10 @@ void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel){
     INTAN_config->waiting_trigger = true;
 }
 
+void disconnect_channels_from_gnd(INTAN_config_struct* INTAN_config){
+    write_command(INTAN_config, CHRG_RECOV_SWITCH, 0x0000);
+    INTAN_config->waiting_trigger = true;
+}
 
 // Recovery current limited to get to the Vrecov
 typedef struct {
@@ -935,6 +940,16 @@ void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config){
 
 }
 
+
+void enable_charge_recovery_sw(INTAN_config_struct* INTAN_config, uint8_t channel){
+    write_command(INTAN_config, CURR_LIM_CHRG_RECOV_EN, channel+1);
+    INTAN_config->waiting_trigger = true;
+}
+
+void disable_charge_recovery_sw(INTAN_config_struct* INTAN_config){
+    write_command(INTAN_config, CURR_LIM_CHRG_RECOV_EN, 0x0000);
+    INTAN_config->waiting_trigger = true;
+}
 
 // ADC Buffer Bias Current related registers
 void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config){

@@ -62,6 +62,7 @@ void send_values(INTAN_config_struct* INTAN_config, uint16_t pckt_count){
     UCA0TXBUF = INTAN_config->array4[pckt_count];
     while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_4=UCA0RXBUF;
+    __delay_cycles(CLK_2_CYCLES);
 
     
     uint32_t rx_value = ((uint32_t)rx_packet_1 << 24) |
@@ -77,7 +78,7 @@ void send_values(INTAN_config_struct* INTAN_config, uint16_t pckt_count){
 
 
 void send_confirmation_values(INTAN_config_struct* INTAN_config){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    uint16_t reg_config_num = INTAN_config->max_size;
     INTAN_config->array1[reg_config_num] = READ_ACTION;
     INTAN_config->array2[reg_config_num] = REGISTER_VALUE_TEST;
     INTAN_config->array3[reg_config_num] = ZEROS_8;
@@ -109,7 +110,7 @@ void send_confirmation_values(INTAN_config_struct* INTAN_config){
 
 //Function to check if the INTAN is working at all SPECIFIC FUNCTION FOR THE MSP430FG479
 void check_intan_SPI_array(INTAN_config_struct* INTAN_config){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    uint16_t reg_config_num = INTAN_config->max_size;
 
     //1.  SPI ficticio tras encender para asegurar que el controlador esta en el estado correcto
     INTAN_config->array1[reg_config_num] = READ_ACTION;
@@ -146,7 +147,7 @@ void check_intan_SPI_array(INTAN_config_struct* INTAN_config){
 
 //Clear command sent to the INTAN through SPI by the MSP430FG479
 void clear_command(INTAN_config_struct* INTAN_config){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    uint16_t reg_config_num = INTAN_config->max_size;
     // uint8_t obtained_RX_i = INTAN_config->obtained_RX_i;
     // Comando de limpieza recomendado en la pg 33 para inicializar el ADC para su operación normal
     INTAN_config->array1[reg_config_num] = CLEAR_ACTION;
@@ -171,7 +172,7 @@ void clear_command(INTAN_config_struct* INTAN_config){
 }
 //Write command sent to the INTAN through SPI by the MSP430FG479
 void write_command(INTAN_config_struct* INTAN_config, uint8_t R, uint16_t D){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    uint16_t reg_config_num = INTAN_config->max_size;
     // Flag U on M off
     if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == false)){
         INTAN_config->array1[reg_config_num] = WRITE_ACTION_U;
@@ -210,7 +211,7 @@ void write_command(INTAN_config_struct* INTAN_config, uint8_t R, uint16_t D){
 
 //Read command sent to the INTAN through SPI by the MSP430FG479
 void read_command(INTAN_config_struct* INTAN_config, uint8_t R, char id){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
+    uint16_t reg_config_num = INTAN_config->max_size;
     // Flag U on M off
     if ((INTAN_config->U_flag == true)&&(INTAN_config->M_flag == false)){
         INTAN_config->array1[reg_config_num] = READ_ACTION_U;
@@ -245,8 +246,8 @@ void read_command(INTAN_config_struct* INTAN_config, uint8_t R, char id){
 
 // Convert channel command sent to the INTAN through SPI by the MSP430FG479
 void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
-    volatile uint8_t saved_value;
+    uint16_t reg_config_num = INTAN_config->max_size;
+    uint8_t saved_value;
     if (Channel >= 16){
         perror("Error: Too high Channel value.");
         while(1);
@@ -296,9 +297,9 @@ void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel){
 
 // Convert N channels command sent to the INTAN through SPI by the MSP430FG479
 void convert_N_channels(INTAN_config_struct* INTAN_config){
-    volatile uint16_t reg_config_num = INTAN_config->max_size;
-    volatile uint8_t saved_value; 
-    volatile uint8_t Channel;
+    uint16_t reg_config_num = INTAN_config->max_size;
+    uint8_t saved_value; 
+    uint8_t Channel;
     uint8_t i;
     INTAN_config->max_size = reg_config_num;
     uint8_t number_channels;
