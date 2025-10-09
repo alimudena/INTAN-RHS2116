@@ -307,23 +307,23 @@
 
 
 // ADC sampling rate dependance buffer bias and MUX bias
-#define      ADC_BUFFER_BIAS_less_120k         0x20
-#define      ADC_BUFFER_BIAS_140k              0x10
-#define      ADC_BUFFER_BIAS_175k              0x08
-#define      ADC_BUFFER_BIAS_220k              0x08
-#define      ADC_BUFFER_BIAS_280k              0x08
-#define      ADC_BUFFER_BIAS_350k              0x04
-#define      ADC_BUFFER_BIAS_440k              0x03
-#define      ADC_BUFFER_BIAS_more_440k         0x03
+#define      ADC_BUFFER_BIAS_less_120k         32
+#define      ADC_BUFFER_BIAS_140k              16
+#define      ADC_BUFFER_BIAS_175k              8
+#define      ADC_BUFFER_BIAS_220k              8
+#define      ADC_BUFFER_BIAS_280k              8
+#define      ADC_BUFFER_BIAS_350k              4
+#define      ADC_BUFFER_BIAS_440k              3
+#define      ADC_BUFFER_BIAS_more_440k         3
 
-#define      MUX_BIAS_less_120k                0x28
-#define      MUX_BIAS_140k                     0x28
-#define      MUX_BIAS_175k                     0x28
-#define      MUX_BIAS_220k                     0x20
-#define      MUX_BIAS_280k                     0x1A
-#define      MUX_BIAS_350k                     0x12
-#define      MUX_BIAS_440k                     0x10
-#define      MUX_BIAS_more_440k                0x05
+#define      MUX_BIAS_less_120k                40
+#define      MUX_BIAS_140k                     40
+#define      MUX_BIAS_175k                     40
+#define      MUX_BIAS_220k                     32
+#define      MUX_BIAS_280k                     26
+#define      MUX_BIAS_350k                     18
+#define      MUX_BIAS_440k                     16
+#define      MUX_BIAS_more_440k                5
 
 
 

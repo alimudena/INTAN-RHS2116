@@ -143,6 +143,9 @@ void stim_PNBIAS_configuration(INTAN_config_struct* INTAN_config);
 // Stimulation current configuration for each channel separately, positive and negative trim and magnitude
 void stim_current_channel_configuration(INTAN_config_struct* INTAN_config, uint8_t channel, uint8_t neg_current_trim, uint8_t neg_current_mag, uint8_t pos_current_trim, uint8_t pos_current_mag);
 
+// Turn off all channels for the stimulation
+void all_stim_channels_off(INTAN_config_struct* INTAN_config);
+
 // Stimulation on or off for each channel
 void stimulation_on(INTAN_config_struct* INTAN_config);
 

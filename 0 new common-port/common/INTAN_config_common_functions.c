@@ -667,7 +667,7 @@ void A_or_B_cutoff_frequency(INTAN_config_struct* INTAN_config){
     uint8_t i;
     uint16_t amp_values = 0;
     for (i = NUM_CHANNELS; i > 0; i--){
-        if(INTAN_config->amplifier_cutoff_frequency_A_B[i-1] == 'B'){
+        if(INTAN_config->amplifier_cutoff_frequency_A_B[i-1] == 'A'){
             amp_values = amp_values | (1<<(i-1));
         }
     }
@@ -773,7 +773,7 @@ uint16_t vias_voltages_sel(uint16_t step_sel) {
         if (bias_voltage_table[i].current_nA == step_sel) {
             BiasVoltageConfig cfg = bias_voltage_table[i];
             uint16_t result = 0;
-            result |= (cfg.PBIAS & 0x3F) << 8;
+            result |= (cfg.PBIAS & 0x3F) << 4;
             result |= (cfg.NBIAS & 0x7F);
             return result;
         }
@@ -805,6 +805,14 @@ void stim_current_channel_configuration(INTAN_config_struct* INTAN_config, uint8
     if (!(INTAN_config->waiting_trigger)){
         INTAN_config->waiting_trigger = true;
     }
+}
+
+//Turn off all channels for the stimulation
+void all_stim_channels_off(INTAN_config_struct* INTAN_config){
+    int i;
+    for (i= NUM_CHANNELS-1; i>=0; i--){
+        INTAN_config->stimulation_on[i] = 0;
+    } 
 }
 
 // Stimulation on or off for each channel
@@ -1003,7 +1011,7 @@ void impedance_check_control(INTAN_config_struct* INTAN_config){
         while(1);
     }
     
-    uint16_t reg_value = ((uint16_t)zcheck_select << 8) | ((uint16_t)zcheck_DAC_enhable << 6) | ((uint16_t)zcheck_load << 5) | ((uint16_t)zcheck_scale << 3) | zcheck_en;
+    uint16_t reg_value = (((uint16_t)zcheck_select << 8) | ((uint16_t)zcheck_DAC_enhable << 6) | ((uint16_t)zcheck_load << 5) | ((uint16_t)zcheck_scale << 3) | ((uint16_t)zcheck_en));
     write_command(INTAN_config, IMPEDANCE_CHECK_CONTROL, reg_value);
 }
 
@@ -1063,11 +1071,11 @@ void power_OFF_output_2(INTAN_config_struct* INTAN_config){
 
 // Compliment 2 enable and disable 
 void enable_C2(INTAN_config_struct* INTAN_config){
-    INTAN_config->C2_enabled = 0;
+    INTAN_config->C2_enabled = 1;
     write_register_1(INTAN_config);
 }
 void disable_C2(INTAN_config_struct* INTAN_config){
-    INTAN_config->C2_enabled = 1;    
+    INTAN_config->C2_enabled = 0;    
     write_register_1(INTAN_config);
 }
 
@@ -1199,18 +1207,18 @@ void minimum_power_disipation(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, CH14_POS_CURR_MAG, 0x0000);
     write_command(INTAN_config, CH15_POS_CURR_MAG, 0x0000);
 
-    // Charge recovery current limitto 1 nA
-    INTAN_config->current_recovery = 1;
-    charge_recovery_current_configuration(INTAN_config);
+    // // Charge recovery current limit to 1 nA
+    // INTAN_config->current_recovery = 1;
+    // charge_recovery_current_configuration(INTAN_config);
 
-    // stimulation current step
-    INTAN_config->step_DAC = 10;
-    stim_step_DAC_configuration(INTAN_config);
+    // // stimulation current step
+    // INTAN_config->step_DAC = 10;
+    // stim_step_DAC_configuration(INTAN_config);
 
 
-    // Second AC amplifier lower cutoff frequency
-    INTAN_config->fc_low_B = 0.1f;
-    fc_low_B(INTAN_config);
+    // // Second AC amplifier lower cutoff frequency
+    // INTAN_config->fc_low_B = 0.1f;
+    // fc_low_B(INTAN_config);
 
     // Power down un used AC amplifiers
     write_command(INTAN_config, ADC_INDIVIDUAL_AMP_POWER, 0x0000);

@@ -27,16 +27,6 @@
 
 #define REGISTER_VALUE_TEST             0b11111111
 
-// Stimulation enable
-#define STIM_ENABLE_A_reg               0b00100001 //32
-#define STIM_ENABLE_B_reg               0b00100000 //33
-
-
-// Stimulation step size
-#define STIM_STEP_SIZE                  0x22 //34
-
-// Stimulation Bias Voltages
-#define STIM_BIAS_VOLTAGE               0x23 //35
 
 // Supply sensor and ADC Buffer Vias Current
 #define ADC_BIAS_BUFFER                 0x00 //0
@@ -62,6 +52,17 @@
 
 #define AMP_LOW_CUTOFF_FREQ_SELECT      0x0C //12
 
+
+// Stimulation enable
+#define STIM_ENABLE_A_reg               32 //32
+#define STIM_ENABLE_B_reg               33 //33
+
+
+// Stimulation step size
+#define STIM_STEP_SIZE                  0x22 //34
+
+// Stimulation Bias Voltages
+#define STIM_BIAS_VOLTAGE               0x23 //35
 
 // Current-Limited Charge Recovery Target Voltage
 #define CURRENT_LIMITED_CHARGE_RECOVERY_VOLTAGE_TARGET 0x24 //36

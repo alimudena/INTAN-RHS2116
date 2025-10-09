@@ -139,6 +139,8 @@ int main(void) {
 
         stim_en_OFF();
         bool next_stim = button_pressed(); 
+                initialize_INTAN(&INTAN_config);
+
         while(1){
                 while(!next_stim){
                         next_stim = button_pressed();
@@ -147,276 +149,222 @@ int main(void) {
              
                 send_SPI_commands(&INTAN_config);
              
-                write_command(&INTAN_config, 32, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 33, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 38, 0xFFFF);
 
+                /*
+                        write_command(&INTAN_config, 32, 0x0000);             
+                        write_command(&INTAN_config, 33, 0x0000);                
+                        write_command(&INTAN_config, 38, 0xFFFF);
+                        clear_command(&INTAN_config);
+                        write_command(&INTAN_config, 0, 0x00C5);
+                        write_command(&INTAN_config, 8, 0xFFFF);
+
+                */
+                stimulation_disable(&INTAN_config); // 0x0000 0x0000
+                send_SPI_commands(&INTAN_config);
+                minimum_power_disipation(&INTAN_config);
                 clear_command(&INTAN_config);
+                INTAN_config.ADC_sampling_rate = 480;
+                ADC_sampling_rate_config(&INTAN_config);
 
-                write_command(&INTAN_config, 0, 0x00C5);
-             
                 send_SPI_commands(&INTAN_config);
              
-                write_command(&INTAN_config, 1, 0x051A);
-             
+                /*
+                        write_command(&INTAN_config, 1, 0x051A);
+                */
+                
+                disable_digital_output_1(&INTAN_config);
+                disable_digital_output_2(&INTAN_config);
+                power_OFF_output_1(&INTAN_config);
+                power_OFF_output_2(&INTAN_config);
+                disable_C2(&INTAN_config);
+                disable_absolute_value(&INTAN_config);
+                disable_digital_signal_processing_HPF(&INTAN_config);
+                INTAN_config.DSP_cutoff_freq = 4.665;
+                INTAN_config.number_channels_to_convert = 8;
+                DSP_cutoff_frequency_configuration(&INTAN_config);
+
+
+
+                send_SPI_commands(&INTAN_config);
+
+                /*
+                        write_command(&INTAN_config, 2, 0x0040);
+                        write_command(&INTAN_config, 3, 0x0080);
+                */
+
+                INTAN_config.zcheck_select = 0;
+                INTAN_config.zcheck_load = 1;
+                INTAN_config.zcheck_scale = 0;
+                INTAN_config.zcheck_en = 0;
+                impedance_check_control(&INTAN_config);
+                INTAN_config.zcheck_DAC_value = 128;
+                impedance_check_DAC(&INTAN_config);
                 send_SPI_commands(&INTAN_config);
              
-                write_command(&INTAN_config, 2, 0x0040);
-             
+                /*
+                        write_command(&INTAN_config, 4, 0x0016);
+                        write_command(&INTAN_config, 5, 0x0017);
+
+                        write_command(&INTAN_config, 6, 0x00A8);
+                        write_command(&INTAN_config, 7, 0x000A);
+
+                */
+                INTAN_config.fh_magnitude = 7.5;
+                INTAN_config.fh_unit = 'k';
+                INTAN_config.fc_low_A = 5;
+                INTAN_config.fc_low_B = 1000;
+                
+                fc_high(&INTAN_config);
+                
+                fc_low_A(&INTAN_config);
+                fc_low_B(&INTAN_config);
                 send_SPI_commands(&INTAN_config);
              
-                write_command(&INTAN_config, 3, 0x0080);
+       
+                /*
+                        write_command(&INTAN_config, 10, 0x0000);
+                        write_command(&INTAN_config, 12, 0xFFFF);
+                */
+                amp_fast_settle_reset(&INTAN_config);          
+                A_or_B_cutoff_frequency(&INTAN_config);
+                send_SPI_commands(&INTAN_config);
+
              
+                /*
+                        write_command(&INTAN_config, 34, 0x00E2);
+                        write_command(&INTAN_config, 35, 0x00AA);
+                */
+                INTAN_config.step_DAC = 1000; // uA
+                stim_step_DAC_configuration(&INTAN_config);
+                stim_PNBIAS_configuration(&INTAN_config);             
+                send_SPI_commands(&INTAN_config);
+
+                /*
+                        write_command(&INTAN_config, 36, 0x0080);
+                        write_command(&INTAN_config, 37, 0x4F00);        
+                */             
+            
+                INTAN_config.voltage_recovery = 0;
+                INTAN_config.current_recovery = 1;
+                charge_recovery_voltage_configuration(&INTAN_config);
+                charge_recovery_current_configuration(&INTAN_config);
                 send_SPI_commands(&INTAN_config);
              
+                /*
+                        write_command(&INTAN_config, 42, 0x0000);
+                        write_command(&INTAN_config, 44, 0x0000);     
+                        write_command(&INTAN_config, 46, 0x0000);
+                        write_command(&INTAN_config, 48, 0x0000);        
+                */
+                all_stim_channels_off(&INTAN_config);
+                stimulation_on(&INTAN_config);
+                stimulation_polarity(&INTAN_config);
+                disconnect_channels_from_gnd(&INTAN_config);
+                disable_charge_recovery_sw(&INTAN_config);
                 send_SPI_commands(&INTAN_config);
              
-                write_command(&INTAN_config, 4, 0x0016);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 5, 0x0017);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 6, 0x00A8);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 7, 0x000A);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 8, 0xFFFF);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 10, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 12, 0xFFFF);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 34, 0x00E2);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 35, 0x00AA);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 36, 0x0080);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 37, 0x4F00);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 42, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 44, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 46, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 48, 0x0000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 64, 0x80FF);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 65, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 66, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 67, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 68, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 69, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 70, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 71, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 72, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 73, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 74, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 75, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
+             /*
+                write_command(&INTAN_config, 64, 0x80FF);             
+                write_command(&INTAN_config, 65, 0x8000);             
+                write_command(&INTAN_config, 66, 0x8000);             
+                write_command(&INTAN_config, 67, 0x8000);             
+                write_command(&INTAN_config, 68, 0x8000);             
+                write_command(&INTAN_config, 69, 0x8000);             
+                write_command(&INTAN_config, 70, 0x8000);             
+                write_command(&INTAN_config, 71, 0x8000);             
+                write_command(&INTAN_config, 72, 0x8000);             
+                write_command(&INTAN_config, 73, 0x8000);             
+                write_command(&INTAN_config, 74, 0x8000);             
+                write_command(&INTAN_config, 75, 0x8000);             
                 write_command(&INTAN_config, 76, 0x8000);
-   
-                send_SPI_commands(&INTAN_config);
-   
-                write_command(&INTAN_config, 77, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 78, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
+                write_command(&INTAN_config, 77, 0x8000);             
+                write_command(&INTAN_config, 78, 0x8000);             
                 write_command(&INTAN_config, 79, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
-                write_command(&INTAN_config, 96, 0x80FF);
-             
-                send_SPI_commands(&INTAN_config);
-             
+                write_command(&INTAN_config, 96, 0x80FF);             
                 write_command(&INTAN_config, 97, 0x8000);
-
-                send_SPI_commands(&INTAN_config);
-
                 write_command(&INTAN_config, 98, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 99, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 100, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 101, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 102, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 103, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 104, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 105, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 106, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 107, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 108, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 109, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 110, 0x8000);
-             
-                send_SPI_commands(&INTAN_config);
-             
                 write_command(&INTAN_config, 111, 0x8000);
+             */
 
+                stim_current_channel_configuration(&INTAN_config, 0, 0x80, 0xFF, 0x80, 0xFF);
+                for (i = NUM_CHANNELS-1; i>0; i--){
+                        stim_current_channel_configuration(&INTAN_config, i, 0x80, 0x00, 0x80, 0x00);
+                }
                 send_SPI_commands(&INTAN_config);
-
 
                 enable_U_flag(&INTAN_config);
                 enable_M_flag(&INTAN_config);
-
                 read_command(&INTAN_config, 255, 'E');
-
                 disable_U_flag(&INTAN_config);
                 disable_M_flag(&INTAN_config);
-
                 send_SPI_commands(&INTAN_config);
 
 
-                write_command(&INTAN_config, 32, 0xAAAA);
+                /*
+                        write_command(&INTAN_config, 32, 0xAAAA);
+                        write_command(&INTAN_config, 33, 0x00FF);        
+                */
+                stimulation_enable(&INTAN_config);
 
                 send_SPI_commands(&INTAN_config);
 
-                write_command(&INTAN_config, 33, 0x00FF);
-
-
+                /*
+                        enable_M_flag(&INTAN_config);
+                        read_command(&INTAN_config, 255, 'E');
+                        disable_M_flag(&INTAN_config);        
+                */
                 enable_U_flag(&INTAN_config);
-                enable_M_flag(&INTAN_config);
-
-                read_command(&INTAN_config, 255, 'E');
-
-                disable_U_flag(&INTAN_config);
-                disable_M_flag(&INTAN_config);
-
+                clean_compliance_monitor(&INTAN_config);
                 send_SPI_commands(&INTAN_config);
+                disable_U_flag(&INTAN_config);
 
                 //The chip is now initialized
 
                 enable_U_flag(&INTAN_config);
                 // positive polarity
-                write_command(&INTAN_config, 44, 0xFFFF);
-             
-                send_SPI_commands(&INTAN_config);
-                // stimulators on             
-                write_command(&INTAN_config, 42, 0xFFFF);
 
+                /*
+                        write_command(&INTAN_config, 44, 0xFFFF);
+                */
+                INTAN_config.stimulation_pol[0] = 'P';
+                stimulation_polarity(&INTAN_config);     
                 send_SPI_commands(&INTAN_config);
 
+
+                // stimulators on
+                /*
+                        write_command(&INTAN_config, 42, 0xFFFF);
+                */
+                INTAN_config.stimulation_on[0] = 1;
+                stimulation_on(&INTAN_config);
                 read_command(&INTAN_config, 255, 'E');
-
                 send_SPI_commands(&INTAN_config);
                 //negative polarity
-                write_command(&INTAN_config, 44, 0x0000);
-             
+
+                /*
+                        write_command(&INTAN_config, 44, 0x0000);
+                */
+                INTAN_config.stimulation_pol[0] = 'N';
+                stimulation_polarity(&INTAN_config);      
                 send_SPI_commands(&INTAN_config);
 
                 read_command(&INTAN_config, 255, 'E');
 
                 send_SPI_commands(&INTAN_config);
+                disable_U_flag(&INTAN_config);
+                disable_M_flag(&INTAN_config);
 
              
 
