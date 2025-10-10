@@ -115,6 +115,11 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
         INTAN_config->amplifier_cutoff_frequency_A_B[i-1] = 'A';
         INTAN_config->stimulation_on[i-1] = false;
         INTAN_config->stimulation_pol[i-1] = 'P';
+        // INTAN_config->negative_current_magnitude[i-1] = 0x00;
+        // INTAN_config->negative_current_trim[i-1] = 0x80;
+        // INTAN_config->positive_current_magnitude[i-1] = 0x00;
+        // INTAN_config->positive_current_trim[i-1] = 0x80;
+ 
     }
 
 }
@@ -857,7 +862,7 @@ void stimulation_enable(INTAN_config_struct* INTAN_config){
 }
 
 
-void ON(INTAN_config_struct* INTAN_config){
+void ON_INTAN(INTAN_config_struct* INTAN_config){
 
     /*
             CONSTANT CURRENT STIMULATOR
@@ -897,7 +902,7 @@ void ON(INTAN_config_struct* INTAN_config){
     disable_M_flag(INTAN_config);
 }
 
-OFF(INTAN_config_struct* INTAN_config){
+void OFF_INTAN(INTAN_config_struct* INTAN_config){
     stimulation_disable(INTAN_config);
     send_SPI_commands(INTAN_config);
 }

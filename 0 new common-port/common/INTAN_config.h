@@ -109,6 +109,11 @@ typedef struct{
 
     bool stimulation_on[NUM_CHANNELS];
     char stimulation_pol[NUM_CHANNELS];
+    uint8_t negative_current_trim[NUM_CHANNELS];
+    uint8_t negative_current_magnitude[NUM_CHANNELS];
+    uint8_t positive_current_trim[NUM_CHANNELS];
+    uint8_t positive_current_magnitude[NUM_CHANNELS];
+
     
 
     } INTAN_config_struct;
@@ -158,8 +163,8 @@ void stimulation_disable(INTAN_config_struct* INTAN_config);
 void stimulation_enable(INTAN_config_struct* INTAN_config);
 
 
-void ON(INTAN_config_struct* INTAN_config);
-void OFF(INTAN_config_struct* INTAN_config);
+void ON_INTAN(INTAN_config_struct* INTAN_config);
+void OFF_INTAN(INTAN_config_struct* INTAN_config);
 
 /*
     COMPLIANCE MONITOR

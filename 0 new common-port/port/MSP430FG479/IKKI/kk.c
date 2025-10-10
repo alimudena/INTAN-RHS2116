@@ -19,8 +19,6 @@
 //                |                 |                   |    
 //                |                 |                  GND
 //                |                 |
-//                |                 |
-//                |                 |
 //                |  ---  CLK  ---  |
 //                |                 |
 //                |             P1.1|--> MCLK = 8Mhz  --> 57 (referencia DCO)
@@ -136,75 +134,7 @@ int main(void) {
 
         stim_en_OFF();
         bool next_stim = button_pressed(); 
-        initialize_INTAN(&INTAN_config);
-
-        /* 
-                STIMULATION DISABLE AND MINIMUM POWER DISIPATION
-        */
-        INTAN_config.ADC_sampling_rate = 480;
-        /*
-                DSP FOR HIGH PASS FILTER REMOVAL
-        */
-        INTAN_config.DSP_cutoff_freq = 4.665;
-        INTAN_config.number_channels_to_convert = 8;
-
-        /*
-                ELECTRODE IMPEDANCE TEST
-        */
-        INTAN_config.zcheck_select = 0;
-        INTAN_config.zcheck_load = 1;
-        INTAN_config.zcheck_scale = 0;
-        INTAN_config.zcheck_en = 0;
-        INTAN_config.zcheck_DAC_value = 128;
-
-        /*
-                AMPLIFIER BANDWIDTH
-        */
-
-        INTAN_config.fh_magnitude = 7.5;
-        INTAN_config.fh_unit = 'k';
-        INTAN_config.fc_low_A = 5;
-        INTAN_config.fc_low_B = 1000;
-
-        /*
-                CONSTANT CURRENT STIMULATOR
-        */
-        INTAN_config.step_DAC = 5000; // uA
-        INTAN_config.negative_current_magnitude[0] = 100;
-        INTAN_config.negative_current_trim[0] = 0x80;
-        INTAN_config.positive_current_magnitude[0] = 100;
-        INTAN_config.positive_current_trim[0] = 0x80;
-
-
-        /*
-                CURRENT LIMITED CHARGE RECOVERY CIRCUIT
-        */             
-        
-        INTAN_config.voltage_recovery = 0;
-        INTAN_config.current_recovery = 1;
-
-
-
-        /*
-                STIMULATION TIMES
-        */
-        #define NUM_STIM_EXP 3
-        #define frequencia_de_estimulacion 20 //20 Hz 
-        #define tiempo_estimulacion 30 //30 segundos
-        
-        #define T_total 1.0f/frequencia_de_estimulacion //1/20Hz
-        #define N_T_total (tiempo_estimulacion * frequencia_de_estimulacion)
-
-        #define TIEMPO_ON_POSITIVO 500 //0.5ms
-        #define TIEMPO_ON_NEGATIVO 500 //0.5ms
-
-        #define CLK_TIEMPO_ON_POSITIVO TIEMPO_ON_POSITIVO*FREQ_MASTER/1000000
-        #define CLK_TIEMPO_ON_NEGATIVO TIEMPO_ON_NEGATIVO*FREQ_MASTER/1000000
-
-        #define TIEMPO_OFF (T_total-TIEMPO_ON_POSITIVO/1000000-TIEMPO_ON_NEGATIVO/1000000)/2
-        // #define CLK_TIEMPO_OFF TIEMPO_OFF*FREQ_MASTER
-        #define CLK_TIEMPO_OFF 392000
-
+                initialize_INTAN(&INTAN_config);
 
         while(1){
                 while(!next_stim){
@@ -223,6 +153,7 @@ int main(void) {
                 send_SPI_commands(&INTAN_config);
                 minimum_power_disipation(&INTAN_config);
                 clear_command(&INTAN_config);
+                INTAN_config.ADC_sampling_rate = 480;
                 ADC_sampling_rate_config(&INTAN_config);
 
                 send_SPI_commands(&INTAN_config);
@@ -242,6 +173,8 @@ int main(void) {
                         DSP FOR HIGH PASS FILTER REMOVAL
                 */
                 disable_digital_signal_processing_HPF(&INTAN_config);
+                INTAN_config.DSP_cutoff_freq = 4.665;
+                INTAN_config.number_channels_to_convert = 8;
                 DSP_cutoff_frequency_configuration(&INTAN_config);
                 /*
                         GENERAL
@@ -253,7 +186,12 @@ int main(void) {
                 /*
                         ELECTRODE IMPEDANCE TEST
                 */
+                INTAN_config.zcheck_select = 0;
+                INTAN_config.zcheck_load = 1;
+                INTAN_config.zcheck_scale = 0;
+                INTAN_config.zcheck_en = 0;
                 impedance_check_control(&INTAN_config);
+                INTAN_config.zcheck_DAC_value = 128;
                 impedance_check_DAC(&INTAN_config);
 
                 send_SPI_commands(&INTAN_config);
@@ -262,6 +200,11 @@ int main(void) {
                         AMPLIFIER BANDWIDTH
                 */
 
+                INTAN_config.fh_magnitude = 7.5;
+                INTAN_config.fh_unit = 'k';
+                INTAN_config.fc_low_A = 5;
+                INTAN_config.fc_low_B = 1000;
+                
                 fc_high(&INTAN_config);
                 fc_low_A(&INTAN_config);
                 fc_low_B(&INTAN_config);
@@ -274,6 +217,7 @@ int main(void) {
                 /*
                         CONSTANT CURRENT STIMULATOR
                 */
+                INTAN_config.step_DAC = 1000; // uA
                 stim_step_DAC_configuration(&INTAN_config);
                 stim_PNBIAS_configuration(&INTAN_config);    
 
@@ -282,6 +226,9 @@ int main(void) {
                 /*
                         CURRENT LIMITED CHARGE RECOVERY CIRCUIT
                 */             
+            
+                INTAN_config.voltage_recovery = 0;
+                INTAN_config.current_recovery = 1;
                 charge_recovery_voltage_configuration(&INTAN_config);
                 charge_recovery_current_configuration(&INTAN_config);
                 send_SPI_commands(&INTAN_config);
@@ -305,12 +252,10 @@ int main(void) {
                 /*
                         CONSTANT CURRENT STIMULATOR
                 */
-                for (i = NUM_CHANNELS-1; i>=0; i--){
-                        stim_current_channel_configuration(&INTAN_config, i, INTAN_config.negative_current_trim[i],INTAN_config.negative_current_magnitude[i], INTAN_config.positive_current_trim[i], INTAN_config.positive_current_magnitude[i]);
+                stim_current_channel_configuration(&INTAN_config, 0, 0x80, 0xFF, 0x80, 0xFF);
+                for (i = NUM_CHANNELS-1; i>0; i--){
+                        stim_current_channel_configuration(&INTAN_config, i, 0x80, 0x00, 0x80, 0x00);
                 }
-
-                send_SPI_commands(&INTAN_config);
-
 
                 send_SPI_commands(&INTAN_config);
 
@@ -330,40 +275,51 @@ int main(void) {
 
 
                 //The chip is now initialized
-                // uint8_t numero_stim_experimento_loop;
-                // uint16_t numero_stim_pos_neg_loop;
-                // for(numero_stim_experimento_loop = NUM_STIM_EXP; numero_stim_experimento_loop>0; numero_stim_experimento_loop--){
-                        // for(numero_stim_pos_neg_loop = N_T_total; numero_stim_pos_neg_loop>0; numero_stim_pos_neg_loop--){
 
-                        while (1) {
+                #define NUM_STIM_EXP 3
+                #define frequencia_de_estimulacion 20 //20 Hz 
+                #define tiempo_estimulacion 30 //30 segundos
+                
+                #define T_total 1.0f/frequencia_de_estimulacion //1/20Hz
+                #define N_T_total (tiempo_estimulacion * frequencia_de_estimulacion)
+
+                #define TIEMPO_ON_POSITIVO 500 //0.5ms
+                #define TIEMPO_ON_NEGATIVO 500 //0.5ms
+
+                #define CLK_TIEMPO_ON_POSITIVO TIEMPO_ON_POSITIVO*FREQ_MASTER/1000000
+                #define CLK_TIEMPO_ON_NEGATIVO TIEMPO_ON_NEGATIVO*FREQ_MASTER/1000000
+
+                #define TIEMPO_OFF (T_total-TIEMPO_ON_POSITIVO/1000000-TIEMPO_ON_NEGATIVO/1000000)/2
+                #define CLK_TIEMPO_OFF TIEMPO_OFF*FREQ_MASTER
+
+
+
+                uint8_t numero_stim_experimento_loop;
+                uint16_t numero_stim_pos_neg_loop;
+                for(numero_stim_experimento_loop = NUM_STIM_EXP; numero_stim_experimento_loop>0; numero_stim_experimento_loop--){
+                        for(numero_stim_pos_neg_loop = N_T_total; numero_stim_pos_neg_loop>0; numero_stim_pos_neg_loop--){
                                 // estimulacion positiva
                                 INTAN_config.stimulation_on[0] = 1;
                                 INTAN_config.stimulation_pol[0] = 'P';
                                 ON_INTAN(&INTAN_config);
-                                // __delay_cycles(CLK_TIEMPO_ON_POSITIVO);                         
-                                __delay_cycles(CLK_1_S_CYCLES);                         
+                                __delay_cycles(CLK_TIEMPO_ON_POSITIVO);                         
 
                                 // no estimulacion
                                 OFF_INTAN(&INTAN_config);
-                                // __delay_cycles(CLK_TIEMPO_OFF);                       
-                                __delay_cycles(CLK_3_S_CYCLES);                         
+                                __delay_cycles(CLK_TIEMPO_OFF);                       
 
                                 // estimulacion negativa
                                 INTAN_config.stimulation_pol[0] = 'N';
                                 ON_INTAN(&INTAN_config);
-                                // __delay_cycles(CLK_TIEMPO_ON_NEGATIVO);                             
-                                __delay_cycles(CLK_1_S_CYCLES);                         
+                                __delay_cycles(CLK_TIEMPO_ON_NEGATIVO);                             
 
                                 // no estimulacion
                                 OFF_INTAN(&INTAN_config);
-                                // __delay_cycles(CLK_TIEMPO_OFF);                              
-                                __delay_cycles(CLK_3_S_CYCLES);                         
-                        
-                        }
+                                __delay_cycles(CLK_TIEMPO_OFF);                              
 
-                        // }
-                        // __delay_cycles(CLK_5_M_CYCLES); 
-                // }
+                        }
+                        __delay_cycles(CLK_5_M_CYCLES); 
+                }
 
 
 
