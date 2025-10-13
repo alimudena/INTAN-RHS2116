@@ -393,6 +393,71 @@ void convert_N_channels(INTAN_config_struct* INTAN_config){
     INTAN_config->max_size = reg_config_num;
 }
 
+void new_stimulation_parameters(INTAN_config_struct* INTAN_config) {
+
+    uint8_t TX = 0;
+    uint8_t rx_bytes[4];  // buffer temporal de 4 bytes (máximo tamaño de variable)
+    uint8_t i;
+
+    // Macro auxiliar para leer un byte desde SPI
+    #define SPI_READ_BYTE()  ({ \
+        while (!(IFG2 & UCA0TXIFG));  /* espera TX listo */ \
+        UCA0TXBUF = TX++; \
+        while (!(IFG2 & UCA0RXIFG));  /* espera dato RX */ \
+        UCA0RXBUF; \
+    })
+
+    // -------- number_of_stimulations (1 byte) --------
+    OFF_CS_ESP_pin();
+    INTAN_config->number_of_stimulations = SPI_READ_BYTE();
+    ON_CS_ESP_pin();
+
+    // -------- resting_time (4 bytes) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->resting_time, rx_bytes, 4);
+    ON_CS_ESP_pin();
+
+    // -------- stimulation_time (2 bytes) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 2; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->stimulation_time, rx_bytes, 2);
+    ON_CS_ESP_pin();
+
+    // -------- stimulation_on_time (4 bytes float) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->stimulation_on_time, rx_bytes, 4);
+    ON_CS_ESP_pin();
+
+    // -------- stimulation_off_time (4 bytes float) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->stimulation_off_time, rx_bytes, 4);
+    ON_CS_ESP_pin();
+
+    // -------- step_DAC (2 bytes) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 2; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->step_DAC, rx_bytes, 2);
+    ON_CS_ESP_pin();
+
+    // -------- positive_magnitude (4 bytes float) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->positive_current_magnitude[0], rx_bytes, 4);
+    ON_CS_ESP_pin();
+
+    // -------- negative_magnitude (4 bytes float) --------
+    OFF_CS_ESP_pin();
+    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
+    memcpy(&INTAN_config->negative_current_magnitude[0], rx_bytes, 4);
+    ON_CS_ESP_pin();
+
+    #undef SPI_READ_BYTE
+}
+
+
 void wait_5_CYCLES(){
     __delay_cycles(CLK_5_CYCLES);
 }

@@ -69,6 +69,59 @@ void OFF_CS_pin(){
     P4OUT &= ~0x10;                          // Off   
 }
 
+//*****************************************************************************
+/*CS for ESP32*/
+//*****************************************************************************
+
+void CS_ESP_setup(){
+    P4DIR |= BIT2;                            // Set P4.2 to output direction
+}
+
+void ON_CS_ESP_pin(){                               // On 
+    P4OUT |= 0x4;
+}
+
+void OFF_CS_ESP_pin(){
+    P4OUT &= ~0x4;                          // Off   
+}
+
+//*****************************************************************************
+/*Timing control from ESP32*/
+//*****************************************************************************
+void timing_control_ESP_init(){
+    P1DIR &= ~BIT1;                             // P1.1 as input
+}
+
+
+bool timing_control_ESP(){
+    return (P1IN & BIT1);
+}
+
+//*****************************************************************************
+/*Stimulation enabler ESP32*/
+//*****************************************************************************
+void stimulation_enable_ESP_init(){
+    P1DIR &= ~BIT4;                             // P1.4 as input
+}
+
+
+bool stimulation_enable_ESP(){
+    return (P1IN & BIT4);
+}
+
+
+//*****************************************************************************
+/*New parameters of stimulation from ESP32*/
+//*****************************************************************************
+void new_parameters_ESP_init(){
+    P1DIR &= ~BIT5;                             // P1.5 as input
+}
+
+
+bool new_parameters_ESP(){
+    return (P1IN & BIT5);
+}
+
 
 //*****************************************************************************
 /*stim_en for INTAN*/

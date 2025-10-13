@@ -24,7 +24,7 @@
 
 #define NUM_CHANNELS 16
 
-#define MAX_VALUES 50
+#define MAX_VALUES 45
 
 /* Definition of the structure that contains all the information related to the:
 - Arrays for comparison of the received value
@@ -35,6 +35,18 @@
 - Flag U
 */
 typedef struct{
+
+
+    /* Parameters that may be needed but not necessarily*/
+    uint8_t number_of_stimulations;
+    uint32_t resting_time;
+    uint16_t stimulation_time;
+    float stimulation_on_time;
+    float stimulation_off_time;
+
+
+
+
     uint16_t step_sel;
     uint16_t CL_sel;
     uint8_t array1[MAX_VALUES];
@@ -262,6 +274,9 @@ void disable_D_flag(INTAN_config_struct* INTAN_config);
 // Functions for sampling one channel or N channels
 void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel);
 void convert_N_channels(INTAN_config_struct* INTAN_config);
+
+// Function for updating the stimulation parameters that come from an external device
+void new_stimulation_parameters(INTAN_config_struct* INTAN_config);
 
 // Function for clearing command - setting ADC calibration
 void clear_command(INTAN_config_struct* INTAN_config);
