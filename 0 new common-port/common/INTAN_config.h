@@ -40,9 +40,9 @@ typedef struct{
     /* Parameters that may be needed but not necessarily*/
     uint8_t number_of_stimulations;
     uint32_t resting_time;
-    uint16_t stimulation_time;
-    float stimulation_on_time;
-    float stimulation_off_time;
+    uint32_t stimulation_time;
+    uint32_t stimulation_on_time;
+    uint32_t stimulation_off_time;
 
 
 

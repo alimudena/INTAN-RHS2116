@@ -3,8 +3,8 @@
  * ----------------------------------------------------------
  *  Señal SPI | Dirección | ESP32-S3 (Slave) | Maestro SPI
  * ----------------------------------------------------------
- *  MISO      |  →        | GPIO 13  -  D13  | MOSI
- *  MOSI      |  ←        | GPIO 14  -  A4   | MISO
+ *  MISO      |  →        | GPIO 13  -  D13  | MISO
+ *  MOSI      |  ←        | GPIO 14  -  A4   | MOSI
  *  SCLK      |  ←        | GPIO 12  -  D12  | SCLK
  *  CS (SS)   |  ←        | GPIO 15  -  A5   | CS / SS
  *  GND       |  ↔        | GND              | GND
@@ -17,7 +17,7 @@
  *       slave.begin(HSPI, misoPin, mosiPin, sclkPin, ssPin);
  ************************************************************/
 
-
+/*SCK=*/12, /*MISO=*/13, /*MOSI=*/14, /*SS=*/15);
 #include <ESP32SPISlave.h>
 #include "helper.h"
 

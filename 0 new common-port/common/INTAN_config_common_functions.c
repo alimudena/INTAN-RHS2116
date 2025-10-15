@@ -174,7 +174,7 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
     bool checked_rcvd = check_received_commands(INTAN_config);
     if (!checked_rcvd){
         // while(1){
-            // ON_INTAN_LED();
+            ON_INTAN_LED();
             // perror("ERROR RECEIVING.");
         // }
     }else{

@@ -393,68 +393,52 @@ void convert_N_channels(INTAN_config_struct* INTAN_config){
     INTAN_config->max_size = reg_config_num;
 }
 
+
+uint8_t SPI_READ_BYTE(uint8_t TX){
+        uint8_t RX;
+        while (!(IFG2 & UCA0TXIFG));  /* espera TX listo */
+        UCA0TXBUF = TX++;
+        while (!(IFG2 & UCA0RXIFG));  /* espera dato RX */
+        RX = UCA0RXBUF;
+        return RX;
+}
+
 void new_stimulation_parameters(INTAN_config_struct* INTAN_config) {
+    volatile uint8_t RX1;
+    volatile uint8_t RX2;
+    volatile uint8_t RX3;
 
-    uint8_t TX = 0;
-    uint8_t rx_bytes[4];  // buffer temporal de 4 bytes (máximo tamaño de variable)
-    uint8_t i;
+    bool well_initialized = false;
+    while(!well_initialized){
+        OFF_CS_ESP_pin();
+        while (!(IFG2 & UCA0TXIFG));
+        UCA0TXBUF = 0xAA;
+        while (!(IFG2 & UCA0RXIFG));
+        RX1 = UCA0RXBUF;
+        ON_CS_ESP_pin();
+        if (RX1!=0x30 && RX1 != 0xAA){
+            well_initialized = true;
+        }
+    }
+    INTAN_config->number_of_stimulations = RX1;
 
-    // Macro auxiliar para leer un byte desde SPI
-    #define SPI_READ_BYTE()  ({ \
-        while (!(IFG2 & UCA0TXIFG));  /* espera TX listo */ \
-        UCA0TXBUF = TX++; \
-        while (!(IFG2 & UCA0RXIFG));  /* espera dato RX */ \
-        UCA0RXBUF; \
-    })
-
-    // -------- number_of_stimulations (1 byte) --------
     OFF_CS_ESP_pin();
-    INTAN_config->number_of_stimulations = SPI_READ_BYTE();
+    while (!(IFG2 & UCA0TXIFG));
+    UCA0TXBUF = 0xBB;
+    while (!(IFG2 & UCA0RXIFG));
+    RX2 = UCA0RXBUF;
     ON_CS_ESP_pin();
 
-    // -------- resting_time (4 bytes) --------
     OFF_CS_ESP_pin();
-    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->resting_time, rx_bytes, 4);
+    while (!(IFG2 & UCA0TXIFG));
+    UCA0TXBUF = 0xBB;
+    while (!(IFG2 & UCA0RXIFG));
+    RX3 = UCA0RXBUF;
     ON_CS_ESP_pin();
+    INTAN_config->number_of_stimulations = RX1;
 
-    // -------- stimulation_time (2 bytes) --------
-    OFF_CS_ESP_pin();
-    for (i = 0; i < 2; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->stimulation_time, rx_bytes, 2);
-    ON_CS_ESP_pin();
+   
 
-    // -------- stimulation_on_time (4 bytes float) --------
-    OFF_CS_ESP_pin();
-    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->stimulation_on_time, rx_bytes, 4);
-    ON_CS_ESP_pin();
-
-    // -------- stimulation_off_time (4 bytes float) --------
-    OFF_CS_ESP_pin();
-    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->stimulation_off_time, rx_bytes, 4);
-    ON_CS_ESP_pin();
-
-    // -------- step_DAC (2 bytes) --------
-    OFF_CS_ESP_pin();
-    for (i = 0; i < 2; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->step_DAC, rx_bytes, 2);
-    ON_CS_ESP_pin();
-
-    // -------- positive_magnitude (4 bytes float) --------
-    OFF_CS_ESP_pin();
-    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->positive_current_magnitude[0], rx_bytes, 4);
-    ON_CS_ESP_pin();
-
-    // -------- negative_magnitude (4 bytes float) --------
-    OFF_CS_ESP_pin();
-    for (i = 0; i < 4; i++) rx_bytes[i] = SPI_READ_BYTE();
-    memcpy(&INTAN_config->negative_current_magnitude[0], rx_bytes, 4);
-    ON_CS_ESP_pin();
-
-    #undef SPI_READ_BYTE
 }
 
 
