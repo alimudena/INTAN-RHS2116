@@ -23,13 +23,13 @@
 //                |                 |
 //                |  --- ESP32 ---  |                                           ESP32            
 //                |                 |
-//                |  16         P4.2|-> CS for ESP32 -------------------------> - GPIO 15: A5
-//                |  76         P2.4|-> Data Out (UCA0SIMO) ------------------> - GPIO 13: D13
-//                |  75         P2.5|<- Data In (UCA0SOMI) -------------------> - GPIO 14: A4
-//                |  41         P3.0|-> Serial Clock Out (UCA0CLK) -----------> - GPIO 12: D12
-//                |  57         P1.1|-> Timing alert ESP32 change ------------> - GPIO 2:  RX
-//                |  54         P1.4|-> Stimulation enable ESP32 -------------> - GPIO 1:  TX
-//                |  51         P1.5|-> New parameters available ESP32 -------> - GPIO 8:  A5
+//                |  16         P4.2|-> CS for ESP32 -------------------------> - GPIO 15: 
+//                |  41         P3.0|-> Serial Clock Out (UCA0CLK) -----------> - GPIO 16: 
+//                |  75         P2.5|<- Data In (UCA0SOMI) -------------------> - GPIO 17: 
+//                |  76         P2.4|-> Data Out (UCA0SIMO) ------------------> - GPIO 18: 
+//                |  54         P1.4|-> Stimulation enable ESP32 -------------> - GPIO 1:  
+//                |  57         P1.1|-> Timing alert ESP32 change ------------> - GPIO 2:  
+//                |  51         P1.5|-> New parameters available ESP32 -------> - GPIO 8:  
 //                |                 |-----------------------------------------> - GND
 //                |                 |
 //                |                 |

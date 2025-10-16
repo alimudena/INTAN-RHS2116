@@ -229,10 +229,10 @@ def run_gui():
 
     labels = [
         "number_of_stimulations",
-        "resting_time (s)",
-        "stimulation_time (s)",
+        "resting_time (mins)",
+        "stimulation_time (s))",
         "stimulation_on_time (μs)",
-        "stimulation_off_time (μs)"
+        "stimulation_off_time (ms)"
     ]
     entries = []
     for lbl in labels:

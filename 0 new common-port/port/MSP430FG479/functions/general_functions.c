@@ -85,41 +85,63 @@ void OFF_CS_ESP_pin(){
     P4OUT &= ~0x4;                          // Off   
 }
 
+
 //*****************************************************************************
-/*Timing control from ESP32*/
+/* Pin where MSP430 allows ESP32 to send data via SPI*/
 //*****************************************************************************
-void timing_control_ESP_init(){
-    P1DIR &= ~BIT1;                             // P1.1 as input
+void enable_ESP32_send_parameters_setup(){
+    P1DIR |= BIT1;                             // P1.1 as output
 }
 
 
-bool timing_control_ESP(){
-    return (P1IN & BIT1);
+void enable_ESP32_send_parameters(){
+    P1OUT |= 0x02;
+}
+
+void disable_ESP32_send_parameters(){
+    P1OUT &= ~0x02;
 }
 
 //*****************************************************************************
-/*Stimulation enabler ESP32*/
+/* Pin where ESP32 asks to send data via SPI*/
 //*****************************************************************************
-void stimulation_enable_ESP_init(){
+void ESP32_ask_send_parameters_setup(){
     P1DIR &= ~BIT4;                             // P1.4 as input
 }
 
 
-bool stimulation_enable_ESP(){
+bool ESP32_ask_send_parameters(){
     return (P1IN & BIT4);
 }
 
 
 //*****************************************************************************
-/*New parameters of stimulation from ESP32*/
+/*Is ESP32 connected?*/
 //*****************************************************************************
-void new_parameters_ESP_init(){
+void ESP32_connected_setup(){
     P1DIR &= ~BIT5;                             // P1.5 as input
 }
 
 
-bool new_parameters_ESP(){
+bool ESP32_connected(){
     return (P1IN & BIT5);
+}
+
+
+//*****************************************************************************
+/*LED new parameters from ESP32*/
+//*****************************************************************************
+
+void ESP32_LED_setup(){
+    P4DIR |= BIT0;                            // Set P4.0 to output direction
+}
+
+void OFF_ESP32_LED(){
+    P4OUT &= ~0x01;                          // Off   
+}
+
+void ON_ESP32_LED(){                               // On 
+    P4OUT |= 0x01;
 }
 
 

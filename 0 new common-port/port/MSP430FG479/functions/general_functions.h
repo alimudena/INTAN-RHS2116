@@ -38,18 +38,27 @@ void ON_CS_ESP_pin();
 void OFF_CS_ESP_pin();
 
 
-//Timing control from ESP
-void timing_control_ESP_init();
-bool timing_control_ESP();
+
+// Pin where MSP430 allows ESP32 to send data via SPI
+void enable_ESP32_send_parameters_setup();
+void enable_ESP32_send_parameters();
+void disable_ESP32_send_parameters();
 
 
-// Stimulation enabler ESP32
-void stimulation_enable_ESP_init();
-bool stimulation_enable_ESP();
+// Pin where ESP32 asks to send data via SPI
 
-// Control if new parameters are to be sent by ESP32
-void new_parameters_ESP_init();
-bool new_parameters_ESP();
+void ESP32_ask_send_parameters_setup();
+bool ESP32_ask_send_parameters();
+
+//Is ESP32 connected?
+void ESP32_connected_setup();
+bool ESP32_connected();
+
+
+//LED for ESP32 new parameters
+void ESP32_LED_setup();
+void OFF_ESP32_LED();
+void ON_ESP32_LED();
 
 // end
 
