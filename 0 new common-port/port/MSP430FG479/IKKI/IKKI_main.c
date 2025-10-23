@@ -2,22 +2,56 @@
 //                 -----------------
 //             /|\|              XIN|-
 //              | |                 |  32kHz xtal
-//              --|RST          XOUT|-
+//              --|  RST        XOUT|-
+//                |  12         P4.6|--> LED
 //                |                 |
-//                |   14        P4.4|--> CS for INTAN
-//                |   13        P4.5|--> stim_en for INTAN
-//                |   12        P4.6|--> LED
-//                |   15        P4.3|--> LED for INTAN bug
+//                |  --- INTAN ---  |            
+//                |                 |
+//                |  44         P3.0|-> SCLK B0  
+//                |  43         P2.5|<- MISO B0  
+//                |  42         P2.4|-> MOSI B0  
+//                |  15         P4.3|--> LED for INTAN bug 
+//                |  14         P4.4|--> CS for INTAN
+//                |  13         P4.5|--> stim_en for INTAN
 //                |                 |
 //                |                 |               VCC (3.3V)     
 //                |                 |                   |    
 //                |                 |                   / (resistencia externa de pull-up, 10kΩ)    
 //                |                 |                   |    
-//                |   58        P1.0|--> Botón         P1.0
+//                |  58         P1.0|--> Botón         P1.0
 //                |                 |                   |    
 //                |                 |               [ BOTÓN ]
 //                |                 |                   |    
 //                |                 |                  GND
+//                |                 |
+//                |  --- ESP32 ---  |                                           ESP32            
+//                |                 |
+//                |  18         P4.0|--> LED ESP32 communications indicator  
+//                |  16         P4.2|-> CS for ESP32 -------------------------> - GPIO 15: A3 CS PARAM   
+//                |  11         P4.7|-> CS for ESP32 ECG ---------------------> - GPIO 2: RX CS ECG                              - por si fuese necesaro habilitar otro bus SPI hacia el slave
+//                |  41         P3.0|-> SCLK A0 ------------------------------> - GPIO 16: A2 SCLK PARAM 
+//                |  75         P2.5|<- MISO A0 ------------------------------> - GPIO 17: A1 MISO PARAM 
+//                |  76         P2.4|-> MOSI A0 ------------------------------> - GPIO 18: A0 MOSI PARAM 
+//                |  54         P1.4|-> NEW_PARAM  ---------------------------> - GPIO 11: D11  
+//                |  57         P1.1|<- ACK_PARAM  ---------------------------> - GPIO 12: D12
+//                |  51         P1.5|-> ESP32 connected ----------------------> - GPIO 13: D13
+//                |                 |-----------------------------------------> - GND
+//                |                 |
+//                |  ---  SPI  ---  |
+//                |      USCIA0     |
+//                |  76         P2.4|-> MOSI - USCIA0 
+//                |  75         P2.5|<- MISO - USCIA0
+//                |  41         P3.0|-> SCLK - USCIA0
+//                |                 |
+//                |  ---  SPI  ---  |
+//                |      USCIB0     |
+//                |  42         P2.4|-> MOSI - USCIB0 
+//                |  43         P2.5|<- MISO - USCIB0
+//                |  44         P3.0|-> SCLK - USCIB0
+//                |                 |
+//                |  ---  SD16 ---  |
+//                |             P6.0|<------- A0+: ECG positive input --> 67
+//                |             P6.1|<------- A0-: ECG negative input --> 66
 //                |                 |
 //                |  ---  CLK  ---  |
 //                |                 |
@@ -29,62 +63,12 @@
 //                |  75         P2.5|<------- Receive Data (UCA0RXD) 
 //                |  76         P2.4|-------> Transmit Data (UCA0TXD) 
 //                |                 |
-//                |                 |
-//                |  ---  SPI  ---  |
-//                |                 |
-//                |  76         P2.4|-> Data Out (UCA0SIMO) 
-//                |  75         P2.5|<- Data In (UCA0SOMI)
-//                |  41         P3.0|-> Serial Clock Out (UCA0CLK)
-//                |                 |
-//                |  ---  SD16 ---  |
-//                |                 |
-//                |             P1.5|<------- A3+: EEG1 positive input --> 51
-//                |             P1.4|<------- A3-: EEG1 negative input --> 54
-//                |                 |
-//                |             P1.7|<------- A2+: EEG2 positive input --> 49
-//                |             P1.6|<------- A2-: EEG2 negative input --> 50
-//                |                 |
-//                |             P6.3|<------- A1+: EEG3 positive input --> 64
-//                |             P6.4|<------- A1-: EEG3 negative input --> 63
-//                |                 |
-//                |             P6.0|<------- A0+: ECG positive input --> 67
-//                |             P6.1|<------- A0-: ECG negative input --> 66
-//                |                 |
-//                |             P1.3|<------- A4+: BATT positive input --> 55
-//                |             P1.2|<------- A4-: BATT negative input --> 56
-//                |                 |
 
 
-/*
-State machine for SD16: working with interruptions
-1. Send Channel ID being sampled
-2. Sample
-3. Send sample (x2)
 
-State changes:
-1 - 2 : interruption SD16 ON
-        interruption UART OFF
-2 - 3 : interruption SD16 OFF
-        interruption UART ON
-3 - 1 : interruption SD16 OFF
-        interruption UART ON
-
-*/
-
-/*
-State machine for INTAN configuration: working with polling
-1. Update register and value to be sent
-2. Send register and value
-*/
-
-
-#include "msp430fg479.h"
 #include <msp430.h>
-
-#include "../functions/system_config.h"
-#include "../functions/general_functions.h"
-#include "../functions/SD16_A.h"
-#include "../functions/FLL.h"
+#include <stdbool.h> 
+#include <stdint.h>  
 
 #include "IKKI_MAC.h"
 
@@ -92,102 +76,100 @@ State machine for INTAN configuration: working with polling
 #include "../config/SPI_config.h"
 #include "../config/UART_config.h"
 #include "../config/clk_config.h"
+#include "../config/TIMER_config.h"
 
+#include "../functions/system_config.h"
+#include "../functions/general_functions.h"
+#include "../functions/SD16_A.h"
+#include "../functions/FLL.h"
+#include "../functions/TIMER.h"
 
 
 #include "../../../common/INTAN_config.h"
+#include "../../../common/INTAN_functions.h"
 #include "../../../common/register_macro.h"
 
-
-
-int state = 1;
 volatile uint8_t high_word = 0x00;
 volatile uint8_t low_word = 0xFF;
 bool high_or_low = true;
 int i;
 uint16_t my_register = 0;
 
+uint32_t timing_counter_during_stimulation = 0;
+uint32_t timing_counter_ON_OFF = 0;
+bool ON_OFF_stimulation = true;
+uint8_t number_of_stimulations_done = 10;
+
+uint8_t resting_time_minutes = 0;
+uint8_t stimulation_time_seconds = 0;
+uint8_t high_byte_stimulation_on_time_micro = 0;
+uint8_t low_byte_stimulation_on_time_micro = 0;
+uint16_t stimulation_on_time_micro = 0;
+uint8_t stimulation_off_time_milis = 0;
+
+uint32_t divider_value = 0x028F;
+
+uint8_t RX;
 
 
-#define UART_USAGE    false //True: UART, False: SPI
-#define TEST_CLK      false
-#define SENSE_OR_STIM 3 //1: SENSE interruptions 2: SENSE while 3:STIM 
-#if (SENSE_OR_STIM != 3)
-  #define ECG_or_EEG 1    //1: ECG experiment 2: EEG experiment 3: ECG + BAT 4: EEG + BAT 5: All channels
-  #define SD16_USAGE true
-#elif(SENSE_OR_STIM ==3)
-  uint8_t num_stim = NUM_STIM_EXP;
-
-  uint8_t packet_1 = 1;
-  uint8_t packet_2 = 2;
-  uint8_t packet_3 = 3;
-  uint8_t packet_4 = 4;
-
-#endif
+bool new_parameters;
+bool esp32_connected;
+bool sent = false;
 
 CLK_config_struct CLK_config;
 SD16A_config_struct SD16A_configuration;
-UART_config_struct UART_config;
-SPI_config_struct SPI_config;
+TIMER_config_struct TIMER_config;
 INTAN_config_struct INTAN_config;
+SPI_config_struct SPI_config;
+SPI_B_config_struct SPI_B_config;
 
-#if (SENSE_OR_STIM != 3)
+
+void config_SPI_A0_stim(SPI_config_struct* SPI_config){
+  SPI_config->Master_Slave = 'M';       //M: Master, S: Slave
+  SPI_config->inactive_state = 'L';     // clock polarity inactive low
+  //data cHanged on the first UCLK edge and captured on the following edge
+  //data cAptured on the first UCLK edge and changed on the following edge
+  SPI_config->data_on_clock_edge = 'A'; 
+  SPI_config->SPI_length = 8;
+  SPI_config->first_Byte_sent = 'M'; //M: MSB, L: LSB
+    /*clk_ref:
+      U --> UCLK
+      A --> ACLK
+      S --> SMCLK
+  */
+  SPI_config->clk_ref_SPI = 'S';
+  SPI_config->clk_div = 2;
+  SPI_config->enable_USCI_interr_rx = false;
+  SPI_config->enable_USCI_interr_tx = false;
+}
+
+void config_SPI_B0_stim(SPI_B_config_struct* SPI_B_config){
+  SPI_B_config->Master_Slave = 'M';       //M: Master, S: Slave
+  SPI_B_config->inactive_state = 'L';     // clock polarity inactive low
+  //data cHanged on the first UCLK edge and captured on the following edge
+  //data cAptured on the first UCLK edge and changed on the following edge
+  SPI_B_config->data_on_clock_edge = 'A'; 
+  SPI_B_config->SPI_length = 8;
+  SPI_B_config->first_Byte_sent = 'M'; //M: MSB, L: LSB
+    /*clk_ref:
+      U --> UCLK
+      A --> ACLK
+      S --> SMCLK
+  */
+  SPI_B_config->clk_ref_SPI = 'S';
+  SPI_B_config->clk_div = 2;
+  SPI_B_config->enable_USCI_interr_rx = false;
+  SPI_B_config->enable_USCI_interr_tx = false;
+}
+
+
 void config_SD16A(SD16A_config_struct* SD16A_configuration){
   
       // -- Entrada analógica
       SD16A_configuration->analog_input_being_sampled = 0;
-#if (ECG_or_EEG==1)
       SD16A_configuration->analog_input_count = 1;
       SD16A_configuration->analog_input[0] = ECG;  // 0: A0 - ECG
       SD16A_configuration->analog_input_ID[0] = 0x30; // 0: A0 - ECG
-
-#elif (ECG_or_EEG==2)
-      SD16A_configuration->analog_input_count = 3;
-
-      SD16A_configuration->analog_input[0] = EEG3; // 1: A1 - EEG3
-      SD16A_configuration->analog_input[1] = EEG2; // 2: A2 - EEG2
-      SD16A_configuration->analog_input[2] = EEG1; // 3: A3 - EEG1
-
-      SD16A_configuration->analog_input_ID[0] = 0x30; // 2: A2 - EEG2
-      SD16A_configuration->analog_input_ID[1] = 0x31; // 1: A1 - EEG3
-      SD16A_configuration->analog_input_ID[2] = 0x32; // 3: A3 - EEG1
-#elif (ECG_or_EEG==3)
-      SD16A_configuration->analog_input_count = 2;
-
-      SD16A_configuration->analog_input[0] = ECG;  // 0: A0 - ECG
-      SD16A_configuration->analog_input[1] = BATT; // 4: A4 - BATT
-
-      SD16A_configuration->analog_input_ID[0] = 0x30; // 0: A0 - ECG
-      SD16A_configuration->analog_input_ID[1] = 0x31; // 4: A4 - BATT
-
-#elif (ECG_or_EEG==4)
-      SD16A_configuration->analog_input_count = 4;
-
-      SD16A_configuration->analog_input[0] = EEG3; // 1: A1 - EEG3
-      SD16A_configuration->analog_input[1] = EEG2; // 2: A2 - EEG2
-      SD16A_configuration->analog_input[2] = EEG1; // 3: A3 - EEG1
-      SD16A_configuration->analog_input[3] = BATT; // 4: A4 - BATT
-
-      SD16A_configuration->analog_input_ID[0] = 0x30; // 1: A1 - EEG3
-      SD16A_configuration->analog_input_ID[1] = 0x31; // 2: A2 - EEG2
-      SD16A_configuration->analog_input_ID[2] = 0x32; // 3: A3 - EEG1
-      SD16A_configuration->analog_input_ID[3] = 0x33; // 4: A4 - BATT
-
-#elif (ECG_or_EEG==5)
-      SD16A_configuration->analog_input_count = 5;
-
-      SD16A_configuration->analog_input[0] = ECG;  // 0: A0 - ECG
-      SD16A_configuration->analog_input[1] = EEG3; // 2: A2 - EEG2
-      SD16A_configuration->analog_input[2] = EEG2; // 1: A1 - EEG3
-      SD16A_configuration->analog_input[3] = EEG1; // 3: A3 - EEG1
-      SD16A_configuration->analog_input[4] = BATT; // 4: A4 - BATT
-
-      SD16A_configuration->analog_input_ID[0] = 0x30; // 0: A0 - ECG
-      SD16A_configuration->analog_input_ID[1] = 0x31; // 2: A2 - EEG2
-      SD16A_configuration->analog_input_ID[2] = 0x32; // 1: A1 - EEG3
-      SD16A_configuration->analog_input_ID[3] = 0x33; // 3: A3 - EEG1
-      SD16A_configuration->analog_input_ID[4] = 0x34; // 4: A4 - BATT
-#endif
 
       // -- Tensión de referencia
       SD16A_configuration->v_ref = 'I'; // I: Internal (1.2V), O: Off-chip, E: External
@@ -210,566 +192,359 @@ void config_SD16A(SD16A_config_struct* SD16A_configuration){
 
       SD16A_configuration->sampled = false;
 }
-#endif
-void config_SPI(SPI_config_struct* SPI_config){
-  SPI_config->Master_Slave = 'M';       //M: MSB, L: LSB
-  SPI_config->inactive_state = 'H';     // clock polarity inactive high
-  //data cHanged on the first UCLK edge and captured on the following edge
-  //data cAptured on the first UCLK edge and changed on the following edge
-  SPI_config->data_on_clock_edge = 'H'; // data cAptured on the first UCLK edge and changed on the following edge
-  SPI_config->SPI_length = 8;
-  SPI_config->first_Byte_sent = 'M';
-    /*clk_ref:
-      U --> UCLK
-      A --> ACLK
-      S --> SMCLK
-  */
-  SPI_config->clk_ref_SPI = 'S';
-  SPI_config->clk_div = 2;
-  SPI_config->enable_USCI_interr_rx = false;
-  SPI_config->enable_USCI_interr_tx = false;
-}
-
-void config_SPI_stim(SPI_config_struct* SPI_config){
-  SPI_config->Master_Slave = 'M';       //M: Master, S: Slave
-  SPI_config->inactive_state = 'L';     // clock polarity inactive low
-  //data cHanged on the first UCLK edge and captured on the following edge
-  //data cAptured on the first UCLK edge and changed on the following edge
-  SPI_config->data_on_clock_edge = 'A'; 
-  SPI_config->SPI_length = 8;
-  SPI_config->first_Byte_sent = 'M'; //M: MSB, L: LSB
-    /*clk_ref:
-      U --> UCLK
-      A --> ACLK
-      S --> SMCLK
-  */
-  SPI_config->clk_ref_SPI = 'S';
-  SPI_config->clk_div = 2;
-  SPI_config->enable_USCI_interr_rx = false;
-  SPI_config->enable_USCI_interr_tx = false;
-}
-
-void init_SPI_for_Intan(uint16_t clk_divisor) {
-    // Poner en reset al USCI_A0
-    UCA0CTL1 |= UCSWRST;
-
-    // Limpiar todos los registros USCI_A0
-    UCA0CTL0 = 0;        // Borra CPOL, CPHA, MSB/LSB, modo master/slave, síncrono
-    UCA0CTL1 = 0;
-    UCA0BR0 = 0;
-    UCA0BR1 = 0;
-    UCA0MCTL = 0;
-
-    // Limpiar pines de selección
-    P2SEL &= ~(BIT4 | BIT5);
-    P3SEL &= ~BIT0;
-
-    // Configuración de pines SPI
-    P2SEL |= BIT4 | BIT5; // SIMO, SOMI
-    P3SEL |= BIT0;         // CLK
-
-    // Configuración USCI_A0 en SPI Master, MSB first, Mode 0
-    UCA0CTL0 = UCMST   // Master
-             | UCSYNC  // Síncrono
-             | UCMSB;  // MSB first
-    // CPOL=0, CPHA=0, por defecto
-
-    // Fuente de clock: SMCLK
-    UCA0CTL1 |= UCSSEL_2;
-
-    // Divisor de reloj
-    UCA0BR1 = clk_divisor / 256;
-    UCA0BR0 = clk_divisor % 256;
-
-    // Sin modulación
-    UCA0MCTL = 0;
-
-    // Quitar reset → activar USCI_A0
-    UCA0CTL1 &= ~UCSWRST;
-}
 
 
 
-
-int main(void) {
-    general_setup(CLK_config);
-    init_MSP();
-
-    //************************** CLK configuration *****************************
-    
-    setup_CLK(CLK_config);
-
-    //************************** LED configuration *****************************
-    toggle_setup(); // Setup P4.6 for LED output
-  #if (TEST_CLK)
-    configure_PINS_for_clk_debug();
-
-  #else
-
-  #if (SENSE_OR_STIM==3)
-      config_SPI_stim(&SPI_config);
-      // config_SPI(&SPI_config);
-      SPI_setup(&SPI_config);
+int main(void)
+{
+  general_setup(CLK_config);
+  init_MSP();
+  enable_interruptions(true);
 
 
-      // init_SPI_for_Intan(2);
-      INTAN_LED_setup(); // Setup P4.3 for LED output
-      OFF_INTAN_LED();
+  //************************** CLK configuration *****************************
+  setup_CLK(CLK_config);
 
-      initialize_INTAN(&INTAN_config);
-    
-  #else
-    #if (UART_USAGE)
-      //************************** UART configuration *****************************
-      setup_UART(UART_config);
+  //************************** LED configuration *****************************
+  toggle_setup();
 
-    #else
-      //************************** SPI configuration *****************************
-      config_SPI(&SPI_config);
-      SPI_setup(&SPI_config);
-
-    #endif
-  #endif
-
-  #if (SENSE_OR_STIM==1)
-    #if (SD16_USAGE)
-      //************************** SD16 configuration *****************************
-      config_SD16A(&SD16A_configuration);
-      setup_SD16A(&SD16A_configuration);
-      enable_interruption_SD16A(true);
-      start_conversion(); // While it is started, working in continuous mode will
-                          // sample the channel A until it is stopped
-    #endif
-      UCA0TXBUF = 0x45; // Transmit first character
-
-      enable_interruptions(true);
-
-      IE2 |= UCA0RXIE+UCA0TXIE; // Enabling UART interrupt
   
-  #elif(SENSE_OR_STIM == 2)
-      UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
+  //************************** SPI comms configuration *****************************
+  config_SPI_A0_stim(&SPI_config);
+  SPI_setup(&SPI_config);
 
-      //************************** SD16 configuration *****************************
-      config_SD16A(&SD16A_configuration);
-      setup_SD16A(&SD16A_configuration);
-      start_conversion(); // While it is started, working in continuous mode will
+  config_SPI_B0_stim(&SPI_B_config);
+  SPI_B_setup(&SPI_B_config);
 
-      SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
-      IE2 &= ~(UCA0RXIE|UCA0TXIE);  // Disabling UART interrupt
-      while(1){
-        if (state == 1){
-          my_register = SD16MEM0; // Save CH0 results (clears IFG)
+  //************************** INTAN programming setup ************************** 
+  INTAN_LED_setup(); // Setup P4.3 for LED output
+  OFF_INTAN_LED();
 
-          // 1. select_analog_input(SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled]);
-          // First, clean the bits so to not have more than one channel reading
-          SD16INCTL0 &=  ~(SD16INCH_0 | SD16INCH_1 | SD16INCH_2 | SD16INCH_3 | SD16INCH_4);
-          SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
-          #if (ECG_or_EEG != 1)
-            // 2. Wait for stability
-            __delay_cycles(1600);        // 12.5 µs @ 8 MHz
+  CS_INTAN_setup();
+  ON_CS_INTAN_pin();
+  // stim_en_setup();
+  // stim_en_OFF();
 
-            // 3. Start conversion and discard
-            SD16CCTL0 |= SD16SC;
+  //************************** External button setup  ************************** 
+  button_init();
+  bool next_stim = button_pressed(); 
+
+  //************************** ESP32 communication setup ************************** 
+  CS_ESP_PARAM_setup();
+  ON_CS_ESP_PARAM_pin();
+
+  CS_ESP_ECG_setup();
+  ON_CS_ESP_ECG_pin();
+
+  ACK_param_setup();
+  OFF_ACK_param();
+  new_param_setup();
+  ESP32_connected_setup();
+  ESP32_LED_setup();
+
+  //************************** SD16 configuration *****************************
+  config_SD16A(&SD16A_configuration);
+  setup_SD16A(&SD16A_configuration);
+  start_conversion(); // While it is started, working in continuous mode will
+
+  SD16CCTL0 &= ~(SD16IE);   // Disabling SD16 interrupt
+  IE2 &= ~(UCA0RXIE|UCA0TXIE);  // Disabling UART interrupt
+  
+  //************************** TIMER setup ************************** 
+  source_clock_select_TIMER('S');
+  operating_mode_TIMER('U');
+
+                                                                              TACCR0 = divider_value;
+
+  //************************** INTAN setup ************************** 
+
+  stim_en_OFF();
+  initialize_INTAN(&INTAN_config);
+
+  /* 
+    STIMULATION DISABLE AND MINIMUM POWER DISIPATION
+  */
+  INTAN_config.ADC_sampling_rate = 480;
+  /*
+    DSP FOR HIGH PASS FILTER REMOVAL
+  */
+  INTAN_config.DSP_cutoff_freq = 4.665;
+  INTAN_config.number_channels_to_convert = 8;
+
+  /*
+    ELECTRODE IMPEDANCE TEST
+  */
+  INTAN_config.zcheck_select = 0;
+  INTAN_config.zcheck_load = 1;
+  INTAN_config.zcheck_scale = 0;
+  INTAN_config.zcheck_en = 0;
+  INTAN_config.zcheck_DAC_value = 128;
+
+  /*
+    AMPLIFIER BANDWIDTH
+  */
+
+  INTAN_config.fh_magnitude = 7.5;
+  INTAN_config.fh_unit = 'k';
+  INTAN_config.fc_low_A = 5;
+  INTAN_config.fc_low_B = 1000;
+
+  /*
+    CONSTANT CURRENT STIMULATOR
+  */
+  INTAN_config.step_DAC = 5000; // uA
+  INTAN_config.negative_current_magnitude[0] = 100;
+  INTAN_config.negative_current_trim[0] = 0x80;
+  INTAN_config.positive_current_magnitude[0] = 100;
+  INTAN_config.positive_current_trim[0] = 0x80;
+
+
+  /*
+    CURRENT LIMITED CHARGE RECOVERY CIRCUIT
+  */             
+  
+  INTAN_config.voltage_recovery = 0;
+  INTAN_config.current_recovery = 1;
+
+
+  call_configuration_functions(&INTAN_config);
+
+  /*
+    STIMULATION PARAMETERS
+  */
+  INTAN_config.stimulation_time = 36641;
+  // INTAN_config.stimulation_time = 366412;
+  // INTAN_config.resting_time = 3664122;
+  INTAN_config.resting_time = 36641;
+  INTAN_config.stimulation_on_time = 6;
+  INTAN_config.stimulation_off_time = 604;    
+
+  INTAN_config.number_of_stimulations = 2;
+
+  /*State machine for stimulation parameters*/
+  /*
+
+          state 0: positive stimulation
+          state 1: neutral stimulation
+          state 3: negative stimulation
+          state 4: neutral stimulation
+
+  */
+
+  /*State machine for ESP32 communications*/
+
+
+
+
+  // //************************** other parameters ************************** 
+
+
+    typedef enum {ENVIO_ECG, RX_PARAMS_ESP32, TX_PARAMS_INTAN, NEW_PARAM_OFF_WAIT} Estados;
+    Estados general_state = ENVIO_ECG;
+
+    bool new_param = false;
+
+    bool stimulation_disabled = false; 
+    uint8_t state_INTAN = 0;
+    bool pos_neg = true;
+    uint32_t T_on = INTAN_config.stimulation_on_time;
+    uint32_t T_stim = INTAN_config.stimulation_on_time;
+
+    while(1){
+      switch (general_state) {
+        case ENVIO_ECG: // Estado 1: Muestreo del ECG y envío a través de SPI al ESP32
+
+          new_param = new_param_read();
+          if(new_param){
+            general_state = RX_PARAMS_ESP32;
+            break;
+          }else{
+
+            /*
+                    SEND TO ESP32 THE READ VALUES FROM ECG
+            */
+
+            // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
+            OFF_CS_ESP_PARAM_pin();
             while (!(SD16CCTL0 & SD16IFG));
-            volatile int dummy = SD16MEM0;   // discard
-          #endif
+            my_register = SD16MEM0; // Save CH0 results (clears IFG)
+            high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
+            low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = 0x30;
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            RX = UCA0RXBUF;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = high_word;
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            RX = UCA0RXBUF;
+            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+            UCA0TXBUF = low_word;
+            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+            RX = UCA0RXBUF;    
+            ON_CS_ESP_PARAM_pin();
+            
 
-          // 4. Do real lecture
-          SD16CCTL0 |= SD16SC;
-          while (!(SD16CCTL0 & SD16IFG));
+
+
+
+
+
+            next_stim = button_pressed();
+            if(next_stim){  
+              number_of_stimulations_done = 0;
+            }
+
+            /*
+              SEND DATA TO INTAN BECAUSE OF STATE CHANGE caused by a timer            
+            */
+
+            if(TACTL & TAIFG){ // POLLING AL BIT DE INTERRUPCION DEL TIMER
+              TACTL &= ~TAIFG; // limpiar el flag
+                                                                                                                TACCR0 = 0x028F;
+              if(ON_OFF_stimulation){
+                T_on = INTAN_config.stimulation_time;
+              }else{
+                T_on = INTAN_config.resting_time;
+              }
+
+              if(pos_neg){
+                T_stim = INTAN_config.stimulation_on_time;
+              }else{
+                T_stim = INTAN_config.stimulation_off_time;          
+              }
+
+              if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
+                if(timing_counter_ON_OFF >= T_on){  // si se ha llegado al contador de tiempo encendido/apagado
+                  timing_counter_ON_OFF = 0;
+                  ON_OFF_stimulation = !ON_OFF_stimulation;
+                  if(ON_OFF_stimulation){ // si se ha estimulado se actualiza el contador
+                    number_of_stimulations_done++;
+                  }else{ // si se ha apagado la estimulación se deshabilita
+                    if(!stimulation_disabled){ 
+                      OFF_pin();
+                      OFF_INTAN(&INTAN_config);
+                      stimulation_disabled = true;
+                    }
+                  }
+                }
+                timing_counter_ON_OFF++;  
+              
+
+
+                if(ON_OFF_stimulation){ // si la estimulación está habilitada
+                  ON_pin();
+                  stimulation_disabled = false;
+                  if(timing_counter_during_stimulation >= T_stim){ // y se ha contado el periodo de la señal positiva / negativa / neutra
+                    timing_counter_during_stimulation = 0; // se reinicia el contador y se cambia de estado
+                    switch (state_INTAN) {
+                          case 0:
+                            state_INTAN = 1;
+                            INTAN_config.stimulation_on[0] = 1;
+                            INTAN_config.stimulation_pol[0] = 'P';
+                            ON_INTAN(&INTAN_config);
+                            pos_neg = true;
+                            break;
+                          case 1:
+                            state_INTAN = 2;
+                            OFF_INTAN(&INTAN_config);
+                            pos_neg = false;
+                            break;  
+                          case 2:
+                            state_INTAN = 3;
+                            INTAN_config.stimulation_pol[0] = 'N';
+                            ON_INTAN(&INTAN_config);
+                            pos_neg = true;
+                            break;  
+                          case 3:
+                            state_INTAN = 0;
+                            OFF_INTAN(&INTAN_config);
+                            pos_neg = false;
+                            break;  
+                          default:
+                            perror("Error: not corret state_INTAN.");
+                            break;  
+                      }
+                  }
+                  timing_counter_during_stimulation++;
+                }
+              }else{
+                next_stim = button_pressed();
+                OFF_pin();
+              }
+            }
+
+          }
+
+
+
+
+
+
+
+          break;
           
-          my_register = SD16MEM0; // Save CH0 results (clears IFG)
 
-          // Update the channel to be read the next
-          SD16A_configuration.analog_input_being_sampled++;
-          if (SD16A_configuration.analog_input_being_sampled == SD16A_configuration.analog_input_count) {
-            SD16A_configuration.analog_input_being_sampled = 0;
+        case RX_PARAMS_ESP32: // Estado 2: Recepción de parámetros de estimulación nuevos a través del ESP32
+          ON_ACK_param();
+          __delay_cycles(8000);
+
+
+          ON_ESP32_LED(); // se mantiene el led de recepción encendido como indicador para el usuario
+          OFF_CS_ESP_PARAM_pin();
+          UCA0TXBUF = 0x10;
+          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+          INTAN_config.number_of_stimulations = UCA0RXBUF;
+          UCA0TXBUF = 0x20;
+          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+          resting_time_minutes = UCA0RXBUF;
+          UCA0TXBUF = 0x30;
+          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+          stimulation_time_seconds = UCA0RXBUF;
+          UCA0TXBUF = 0x40;
+          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+          high_byte_stimulation_on_time_micro = UCA0RXBUF;
+          UCA0TXBUF = 0x50;
+          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+          low_byte_stimulation_on_time_micro = UCA0RXBUF;
+          UCA0TXBUF = 0x60;
+          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+          stimulation_off_time_milis = UCA0RXBUF;
+          ON_CS_ESP_PARAM_pin();
+          stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
+
+          INTAN_config.resting_time = resting_time_minutes*60*FREQ_MASTER/divider_value;
+          INTAN_config.stimulation_time = stimulation_time_seconds*FREQ_MASTER/divider_value;
+          INTAN_config.stimulation_on_time = stimulation_on_time_micro*FREQ_MASTER/(1000000*divider_value);
+          INTAN_config.stimulation_off_time = stimulation_off_time_milis*FREQ_MASTER/(1000*divider_value);
+
+          general_state = NEW_PARAM_OFF_WAIT;
+          break;
+        
+        case NEW_PARAM_OFF_WAIT:
+          new_param = new_param_read();
+          if(!new_param){
+            general_state = TX_PARAMS_INTAN;
+            break;
           }
-          high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
-          low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
-          state = 3;
+          
+          break;
+        case TX_PARAMS_INTAN: // Estado 3: actualización de parámetros de estimulación del INTAN
 
-        } else if (state == 3) {
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = high_word;    // Envía el byte alto
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = low_word;     // Envía el byte bajo
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            state = 1;                // Solo aquí finalizamos la transmisión completa de los bytes
-          }
-        }
- 
+          general_state = ENVIO_ECG;
+          number_of_stimulations_done = 100;
+          OFF_ACK_param();
+          break;
+        default:
+          break;
 
+      }
 
-    #elif(SENSE_OR_STIM == 3)
-      CS_setup();
-      ON_CS_pin();
-      stim_en_setup();
-      button_init();
+      // Comprobar los flags del timer y actualizar parámetros del INTAN si es necesario
 
-      INTAN_config.step_sel = 1000;
-
-      INTAN_config.target_voltage = 1.2;
-      INTAN_config.CL_sel = 1;
-      stim_en_OFF();
-      // create_example_SPI_arrays(&INTAN_config);
-      // create_stim_SPI_arrays(&INTAN_config);
-
-      // check_intan_SPI_array(&INTAN_config);
-      // clear_command(&INTAN_config);
-
-
-      // while(pckt_count != INTAN_config.max_size){       
-      //   if (state == 1){
-      //     update_packets(pckt_count, &packet_1, &packet_2, &packet_3, &packet_4, INTAN_config);
-      //     pckt_count++;
-      //     state = 2;      
-      //   }
-      //   else if (state == 2){
-      //     OFF_CS_pin();
-      //     state = 1;
-      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      //     UCA0TXBUF = packet_1;
-      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      //     UCA0TXBUF = packet_2;
-      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      //     UCA0TXBUF = packet_3;
-      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      //     UCA0TXBUF = packet_4;
-      //     while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-      //     ON_CS_pin();           
-      //   }
-      // }
-      //   bool next_stim =true;
-
-      // while(1){
-      //   next_stim = button_pressed();
-      //   if(next_stim == true){
-      //     ON_pin();
-      //     num_stim = NUM_STIM_EXP;
-      //     while(num_stim > 0){
-      //           // stim_en_ON();
-      //           // wait_30_seconds();
-      //           // stim_en_OFF();
-      //           // wait_5_mins();
-                
-      //           stim_en_ON();
-      //           wait_3_seconds();
-      //           stim_en_OFF();
-      //           wait_5_seconds();
-                
-      //           num_stim--;
-      //     }
-      //     OFF_pin();
-      //   }
-      // }
       
 
 
-      while(1){
-        bool next_stim = button_pressed();
-        if(next_stim == true){
-          // check_intan_SPI_array(&INTAN_config);
-
-          // read_command(&INTAN_config, STIM_ENABLE_A_reg);
-          // read_command(&INTAN_config, STIM_ENABLE_B_reg);
-
-          // write_command(&INTAN_config, STIM_ENABLE_A_reg,0x0000);
-          // write_command(&INTAN_config, STIM_ENABLE_B_reg,0x0000);
-
-          // clear_command(&INTAN_config);
-
-          // read_command(&INTAN_config, STIM_ENABLE_A_reg);
-          // read_command(&INTAN_config, STIM_ENABLE_B_reg);
-
-          // write_command(&INTAN_config, 0x00,0x0000);
-          // read_command(&INTAN_config, 0x00);
-
-          // INTAN_config.fh_magnitude = 7.5;
-          // INTAN_config.fh_unit = 'k';
-
-          // fc_high(&INTAN_config); //TODO crear una variable para K y para 7.5 y que se pueda configurar al inicio del todo
-          // read_command(&INTAN_config, ADC_HIGH_FREQ_4);
-          // read_command(&INTAN_config, ADC_HIGH_FREQ_5);
-          // fc_low_A(&INTAN_config, 5.0);
-          // fc_low_B(&INTAN_config, 1000);
-          // read_command(&INTAN_config, ADC_LOW_FREQ_A);
-          // read_command(&INTAN_config, ADC_LOW_FREQ_B);
-
-
-          // Functions for enabling and disabling flags
-          // enable_M_flag(&INTAN_config);
-          // enable_U_flag(&INTAN_config);
-          // enable_H_flag(&INTAN_config);
-          // enable_D_flag(&INTAN_config);
-
-          /*Conversion of channels*/
-          // convert_channel(&INTAN_config, 0);
-          // convert_channel(&INTAN_config, 14);
-          // convert_N_channels(&INTAN_config);
-
-          /*stimulation current configuration */
-          // stim_step_DAC_configuration(&INTAN_config);
-          // stim_PNBIAS_configuration(&INTAN_config);
-
-          // stim_current_channel_configuration(&INTAN_config, 4, 15, 15, 15, 15);
-
-          // Compliance monitor related functions
-          // clean_compliance_monitor(&INTAN_config);
-          // check_compliance_monitor(&INTAN_config);
-          // connect_channel_to_gnd(&INTAN_config, 8);
-          // connect_channel_to_gnd(&INTAN_config, 2);
-          // connect_channel_to_gnd(&INTAN_config, 0);
-
-          // Current and voltage limited charge recovery circuit configuration
-          // charge_recovery_current_configuration(&INTAN_config);
-          // charge_recovery_voltage_configuration(&INTAN_config);
-          // INTAN_config.voltage_recovery = 0;
-          // charge_recovery_voltage_configuration(&INTAN_config);
-          // INTAN_config.voltage_recovery = 1.225;
-          // charge_recovery_voltage_configuration(&INTAN_config);
-
-          // INTAN_config.ADC_sampling_rate = 100;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 130;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 150;
-          // ADC_sampling_rate_config(&INTAN_config);          
-          // INTAN_config.ADC_sampling_rate = 210;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 260;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 300;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 370;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 440;
-          // ADC_sampling_rate_config(&INTAN_config);
-          // INTAN_config.ADC_sampling_rate = 500;
-          // ADC_sampling_rate_config(&INTAN_config);
-
-          // impedance_check_control(&INTAN_config);
-          // INTAN_config.zcheck_select = 5;
-          // INTAN_config.zcheck_DAC_enhable = 1;
-          // INTAN_config.zcheck_load = 1;
-          // INTAN_config.zcheck_scale = 1;
-          // INTAN_config.zcheck_en = 1;
-          // impedance_check_control(&INTAN_config);
-          // INTAN_config.zcheck_select = 2;
-          // INTAN_config.zcheck_DAC_enhable = 1;
-          // INTAN_config.zcheck_load = 0;
-          // INTAN_config.zcheck_scale = 0;
-          // INTAN_config.zcheck_en = 1;
-          // impedance_check_control(&INTAN_config);
-
-
-          // impedance_check_DAC(&INTAN_config);
-          // INTAN_config.zcheck_DAC_value = 255;
-          // impedance_check_DAC(&INTAN_config);
-          // INTAN_config.zcheck_DAC_value = 8;
-          // impedance_check_DAC(&INTAN_config);
-          
-          
-          // // Fault current detection
-          // fault_current_detection(&INTAN_config);
-
-
-          // // Enabling and controlling the digital external outputs 
-          // enable_digital_output_1(&INTAN_config);
-          // enable_digital_output_2(&INTAN_config);
-          // disable_digital_output_1(&INTAN_config);
-          // disable_digital_output_2(&INTAN_config);
-
-
-          // power_ON_output_1(&INTAN_config);
-          // power_ON_output_2(&INTAN_config);
-          // power_OFF_output_1(&INTAN_config);
-          // power_OFF_output_2(&INTAN_config);
-
-          // // Enables and disables C2 compliment dynamically if needed
-          // enable_C2(&INTAN_config);
-          // disable_C2(&INTAN_config);
-
-          // // Enable and disable absolute values
-          // enable_absolute_value(&INTAN_config);
-          // disable_absolute_value(&INTAN_config);
-
-          // // Digital signal processing filter HPF enable or disable
-          // disable_digital_signal_processing_HPF(&INTAN_config);
-          // enable_digital_signal_processing_HPF(&INTAN_config);
-
-          // INTAN_config.DSP_cutoff_freq = 1.2;
-          // INTAN_config.ADC_sampling_rate = 30000;
-          // INTAN_config.number_channels_to_convert = 1;
-
-          // DSP_cutoff_frequency_configuration(&INTAN_config);
-
-          // minimum_power_disipation(&INTAN_config);
-
-          // check_compliance_monitor(&INTAN_config);
-
-          // power_up_AC(&INTAN_config);
-
-          // INTAN_config.amplifier_cutoff_frequency_A_B[0] = 'B';
-          // INTAN_config.amplifier_cutoff_frequency_A_B[8] = 'B';
-          // A_or_B_cutoff_frequency(&INTAN_config);
-
-          // INTAN_config.amplfier_reset[5] = true;
-          // amp_fast_settle(&INTAN_config);
-
-          // A_or_B_cutoff_frequency(&INTAN_config);
-
-          // amp_fast_settle_reset(&INTAN_config);
-
-
-          state = 1;
-          send_SPI_commands(&INTAN_config);
-          while(next_stim == true){
-            next_stim = button_pressed();
-          }
-        }
-      }
-    #endif
-  #endif
-}
-
-
-
-
-#if (SENSE_OR_STIM == 1 && TEST_CLK == false)
-
-  //***************************************************************************** 
-  //Interrupción de la UART
-  //***************************************************************************** 
-  #if (UART_USAGE == true)
-      //TX interrupt handler
-    #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-    #pragma vector=USCIAB0TX_VECTOR
-    __interrupt void USCI_A0_Tx (void)
-    #elif defined(__GNUC__)
-    void __attribute__ ((interrupt(USCIAB0TX_VECTOR))) USCI_A0_Tx (void)
-    #else
-    #error Compiler not supported!
-    #endif
-    {
-      if (state == 1) {
-        UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
-        state = 2;
-        SD16CCTL0 |= SD16IE;         // Enabling SD16 interrupt
-        IE2 &= ~(UCA0RXIE+UCA0TXIE);          // Disabling SPI interrupt
-      }else if (state == 3) {
-        if (high_or_low) {
-          UCA0TXBUF = high_word;      // Envía el byte alto
-          high_or_low = !high_or_low; // Alterna entre alto y bajo
-
-        } else {
-          UCA0TXBUF = low_word;       // Envía el byte bajo
-          state = 1;                  // Solo aquí finalizamos la transmisión completa de los bytes
-          SD16CCTL0 &= ~(SD16IE);     // Disabling SD16 interrupt
-          IE2 |= UCA0RXIE+UCA0TXIE;   // Enabling SPI interrupt
-
-          high_or_low = !high_or_low; // Alterna entre alto y bajo
-        }
-      }
-    }
-
-  #else
-    //*****************************************************************************
-    // Interrupción del SPI
-    //*****************************************************************************
     
-#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector = USCIAB0RX_VECTOR
-__interrupt void USCIA0RX_ISR(void)
-#elif defined(__GNUC__)
-void __attribute__((interrupt(USCIAB0RX_VECTOR))) USCIA0RX_ISR(void)
-#else
-#error Compiler not supported!
-#endif
-    {
-      if (state == 1) {
-        
-        UCA0TXBUF = SD16A_configuration.analog_input_ID[SD16A_configuration.analog_input_being_sampled];
-        state = 2;
-        SD16CCTL0 |= SD16IE;         // Enabling SD16 interrupt
-        IE2 &= ~(UCA0RXIE+UCA0TXIE);          // Disabling SPI interrupt
-
-      }else if (state == 3) {
-        if (high_or_low) {
-          UCA0TXBUF = high_word;      // Envía el byte alto
-          high_or_low = !high_or_low; // Alterna entre alto y bajo
-
-        } else {
-          UCA0TXBUF = low_word;       // Envía el byte bajo
-          state = 1;                  // Solo aquí finalizamos la transmisión completa de los bytes
-          SD16CCTL0 &= ~(SD16IE);     // Disabling SD16 interrupt
-          IE2 |= UCA0RXIE+UCA0TXIE;   // Enabling SPI interrupt
-
-          high_or_low = !high_or_low; // Alterna entre alto y bajo
-        }
-      }
     }
-  #endif
-
-
-
-
-  //*****************************************************************************
-  // Interrupción del SD16_A
-  //*****************************************************************************
-  #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-  #pragma vector = SD16A_VECTOR
-  __interrupt void SD16ISR(void)
-  #elif defined(__GNUC__)
-  void __attribute__((interrupt(SD16A_VECTOR))) SD16ISR(void)
-  #else
-  #error Compiler not supported!
-  #endif
-  {
-    switch (SD16IV) {
-    case 2: // SD16MEM Overflow
-      state = 5;
-      break;
-    case 4: // SD16MEM0 IFG
-      if (state == 2) {
-       
-        // 1. select_analog_input(SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled]);
-        // First, clean the bits so to not have more than one channel reading
-        SD16INCTL0 &=  ~(SD16INCH_0 | SD16INCH_1 | SD16INCH_2 | SD16INCH_3 | SD16INCH_4);
-        SD16INCTL0 |= SD16A_configuration.analog_input[SD16A_configuration.analog_input_being_sampled];
-        #if (ECG_or_EEG != 1)
-        // 2. Wait for stability
-        __delay_cycles(2000);        // 12.5 µs @ 8 MHz
-
-        // 3. Start conversion and discard
-        SD16CCTL0 |= SD16SC;
-        while (!(SD16CCTL0 & SD16IFG));
-        volatile int dummy = SD16MEM0;   // discard
-        #endif
-
-        // 4. Do real lecture
-        SD16CCTL0 |= SD16SC;
-        while (!(SD16CCTL0 & SD16IFG));
-        
-        my_register = SD16MEM0; // Save CH0 results (clears IFG)
-
-        // Update the channel to be read the next
-        SD16A_configuration.analog_input_being_sampled++;
-        if (SD16A_configuration.analog_input_being_sampled == SD16A_configuration.analog_input_count) {
-          SD16A_configuration.analog_input_being_sampled = 0;
-        }
-        high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
-        low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
-        state = 3;
-        IE2 |= UCA0RXIE+UCA0TXIE;                // Enabling SPI interrupt
-        SD16CCTL0 &= ~(SD16IE);                  // Disabling SD16 interrupt
-      } else {
-        IE2 |= UCA0RXIE+UCA0TXIE;                // Enabling SPI interrupt
-        SD16CCTL0 &= ~(SD16IE);                  // Disabling SD16 interrupt
-      }
-      break;
-    }
-  }
-#endif
+}
