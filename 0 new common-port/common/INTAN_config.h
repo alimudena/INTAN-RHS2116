@@ -275,9 +275,6 @@ void disable_D_flag(INTAN_config_struct* INTAN_config);
 void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel);
 void convert_N_channels(INTAN_config_struct* INTAN_config);
 
-// Function for updating the stimulation parameters that come from an external device
-void new_stimulation_parameters(INTAN_config_struct* INTAN_config);
-
 // Function for clearing command - setting ADC calibration
 void clear_command(INTAN_config_struct* INTAN_config);
 

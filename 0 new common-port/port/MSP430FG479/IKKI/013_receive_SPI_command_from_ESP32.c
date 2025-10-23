@@ -325,6 +325,7 @@ int main(void)
 
     new_parameters = ESP32_ask_send_parameters();
     if(new_parameters){ // Mientras el esclavo siga teniendo datos para enviar
+      sent = true;
       enable_ESP32_send_parameters(); // Se sigue advirtiendo al ESP32 de que se puede recibir datos
       // __delay_cycles(80000); // ~10 ms si SMCLK = 8 MHz
       ON_ESP32_LED(); // se mantiene el led de recepción encendido como indicador para el usuario
@@ -340,22 +341,23 @@ int main(void)
       while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
       RX2 = UCA0RXBUF;
       
-      disable_ESP32_send_parameters(); // Se le indica al receptor que ya no se está recibiendo
       ON_CS_ESP_pin();
+      disable_ESP32_send_parameters(); // Se le indica al receptor que ya no se está recibiendo
+      
+
+    }else if(!new_parameters){
+      // Cuando el maestro se ha dado cuenta de que el esclavo ha terminado de enviar los datos:
+      OFF_ESP32_LED();  // se apaga el led de recepción que indica al usuario que se está recibiendo
+
+      esp32_connected = ESP32_connected();
+      if(esp32_connected){
+        ON_INTAN_LED();
+      }else{
+        OFF_INTAN_LED();
+      }
 
     }
 
-    // Cuando el maestro se ha dado cuenta de que el esclavo ha terminado de enviar los datos:
-    OFF_ESP32_LED();  // se apaga el led de recepción que indica al usuario que se está recibiendo
-
-
-
-    esp32_connected = ESP32_connected();
-    if(esp32_connected){
-      ON_INTAN_LED();
-    }else{
-      OFF_INTAN_LED();
-    }
 
 
 
@@ -474,4 +476,3 @@ int main(void)
   //   }
   }
 }
-

@@ -153,13 +153,13 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
             
             // wait_1_second();
             
-            OFF_CS_pin();
+            OFF_CS_INTAN_pin();
             __delay_cycles(CLK_5_CYCLES);
 
             send_values(INTAN_config, pckt_count);
             
             __delay_cycles(CLK_5_CYCLES);
-            ON_CS_pin();   
+            ON_CS_INTAN_pin();   
             
             __delay_cycles(CLK_10_CYCLES);
 

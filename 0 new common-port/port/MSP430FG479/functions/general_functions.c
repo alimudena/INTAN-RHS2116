@@ -57,60 +57,73 @@ void ON_INTAN_LED(){                               // On
 /*CS for INTAN*/
 //*****************************************************************************
 
-void CS_setup(){
+void CS_INTAN_setup(){
     P4DIR |= BIT4;                            // Set P4.4 to output direction
 }
 
-void ON_CS_pin(){                               // On 
-    P4OUT |= 0x10;
+void ON_CS_INTAN_pin(){                               // On 
+    P4OUT |= BIT4;
 }
 
-void OFF_CS_pin(){
-    P4OUT &= ~0x10;                          // Off   
+void OFF_CS_INTAN_pin(){
+    P4OUT &= ~BIT4;                          // Off   
 }
 
 //*****************************************************************************
 /*CS for ESP32*/
 //*****************************************************************************
 
-void CS_ESP_setup(){
+void CS_ESP_PARAM_setup(){
     P4DIR |= BIT2;                            // Set P4.2 to output direction
 }
 
-void ON_CS_ESP_pin(){                               // On 
-    P4OUT |= 0x4;
+void ON_CS_ESP_PARAM_pin(){                               // On 
+    P4OUT |= BIT2;
 }
 
-void OFF_CS_ESP_pin(){
-    P4OUT &= ~0x4;                          // Off   
+void OFF_CS_ESP_PARAM_pin(){
+    P4OUT &= ~BIT2;                          // Off   
+}
+
+
+void CS_ESP_ECG_setup(){
+    P4DIR |= BIT7;                            // Set P4.7 to output direction
+}
+
+void ON_CS_ESP_ECG_pin(){                               // On 
+    P4OUT |= BIT7;
+}
+
+void OFF_CS_ESP_ECG_pin(){
+    P4OUT &= ~BIT7;                          // Off   
 }
 
 
 //*****************************************************************************
 /* Pin where MSP430 allows ESP32 to send data via SPI*/
 //*****************************************************************************
-void enable_ESP32_send_parameters_setup(){
+void ACK_param_setup(){
     P1DIR |= BIT1;                             // P1.1 as output
 }
 
 
-void enable_ESP32_send_parameters(){
-    P1OUT |= 0x02;
+void ON_ACK_param(){
+    P1OUT |= BIT1;
 }
 
-void disable_ESP32_send_parameters(){
-    P1OUT &= ~0x02;
+void OFF_ACK_param(){
+    P1OUT &= ~BIT1;
 }
 
 //*****************************************************************************
-/* Pin where ESP32 asks to send data via SPI*/
+/* NEW PARAMETER AVAILABLE IN ESP32*/
 //*****************************************************************************
-void ESP32_ask_send_parameters_setup(){
+void new_param_setup(){
     P1DIR &= ~BIT4;                             // P1.4 as input
 }
 
 
-bool ESP32_ask_send_parameters(){
+bool new_param_read(){
     return (P1IN & BIT4);
 }
 

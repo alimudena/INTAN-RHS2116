@@ -403,44 +403,6 @@ uint8_t SPI_READ_BYTE(uint8_t TX){
         return RX;
 }
 
-void new_stimulation_parameters(INTAN_config_struct* INTAN_config) {
-    volatile uint8_t RX1;
-    volatile uint8_t RX2;
-    volatile uint8_t RX3;
-
-    bool well_initialized = false;
-    while(!well_initialized){
-        OFF_CS_ESP_pin();
-        while (!(IFG2 & UCA0TXIFG));
-        UCA0TXBUF = 0xAA;
-        while (!(IFG2 & UCA0RXIFG));
-        RX1 = UCA0RXBUF;
-        ON_CS_ESP_pin();
-        if (RX1!=0x30 && RX1 != 0xAA){
-            well_initialized = true;
-        }
-    }
-    INTAN_config->number_of_stimulations = RX1;
-
-    OFF_CS_ESP_pin();
-    while (!(IFG2 & UCA0TXIFG));
-    UCA0TXBUF = 0xBB;
-    while (!(IFG2 & UCA0RXIFG));
-    RX2 = UCA0RXBUF;
-    ON_CS_ESP_pin();
-
-    OFF_CS_ESP_pin();
-    while (!(IFG2 & UCA0TXIFG));
-    UCA0TXBUF = 0xBB;
-    while (!(IFG2 & UCA0RXIFG));
-    RX3 = UCA0RXBUF;
-    ON_CS_ESP_pin();
-    INTAN_config->number_of_stimulations = RX1;
-
-   
-
-}
-
 
 void wait_5_CYCLES(){
     __delay_cycles(CLK_5_CYCLES);

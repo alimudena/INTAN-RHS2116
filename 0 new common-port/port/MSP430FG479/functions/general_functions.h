@@ -19,9 +19,9 @@ void ON_INTAN_LED();
 
 
 //CS for INTAN
-void CS_setup();
-void ON_CS_pin();
-void OFF_CS_pin();
+void CS_INTAN_setup();
+void ON_CS_INTAN_pin();
+void OFF_CS_INTAN_pin();
 
 //stim_en for INTAN
 void stim_en_setup();
@@ -32,23 +32,27 @@ void stim_en_OFF();
 void button_init();
 bool button_pressed();
 
-//CS for ESP
-void CS_ESP_setup();
-void ON_CS_ESP_pin();
-void OFF_CS_ESP_pin();
+//CS for ESP PARAMETERS
+void CS_ESP_PARAM_setup();
+void ON_CS_ESP_PARAM_pin();
+void OFF_CS_ESP_PARAM_pin();
 
+//CS for ESP ECG
+void CS_ESP_ECG_setup();
+void ON_CS_ESP_ECG_pin();
+void OFF_CS_ESP_ECG_pin();
 
 
 // Pin where MSP430 allows ESP32 to send data via SPI
-void enable_ESP32_send_parameters_setup();
-void enable_ESP32_send_parameters();
-void disable_ESP32_send_parameters();
+void ACK_param_setup();
+void ON_ACK_param();
+void OFF_ACK_param();
 
 
 // Pin where ESP32 asks to send data via SPI
 
-void ESP32_ask_send_parameters_setup();
-bool ESP32_ask_send_parameters();
+void new_param_setup();
+bool new_param_read();
 
 //Is ESP32 connected?
 void ESP32_connected_setup();

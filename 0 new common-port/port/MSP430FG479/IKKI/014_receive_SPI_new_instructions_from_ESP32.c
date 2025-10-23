@@ -332,7 +332,9 @@ int main(void)
     */
 
     new_parameters = ESP32_ask_send_parameters();
-    if(new_parameters){ // Mientras el esclavo siga teniendo datos para enviar
+    // disable_ESP32_send_parameters(); // Se le indica al receptor que ya no se está recibiendo
+    if(new_parameters & !sent){ // Mientras el esclavo siga teniendo datos para enviar
+      sent = true;
       enable_ESP32_send_parameters(); // Se sigue advirtiendo al ESP32 de que se puede recibir datos
       // __delay_cycles(80000); // ~10 ms si SMCLK = 8 MHz
       ON_ESP32_LED(); // se mantiene el led de recepción encendido como indicador para el usuario
@@ -368,8 +370,9 @@ int main(void)
       while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
       stimulation_off_time_milis = UCA0RXBUF;
       
-      disable_ESP32_send_parameters(); // Se le indica al receptor que ya no se está recibiendo
       ON_CS_ESP_pin();
+      disable_ESP32_send_parameters(); // Se le indica al receptor que ya no se está recibiendo
+      
 
       stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
 
@@ -381,6 +384,8 @@ int main(void)
       number_of_stimulations_done = 0; // reiniciar la estimulación
 
 
+    }else if(!new_parameters){
+      sent = false;
     }
 
     // Cuando el maestro se ha dado cuenta de que el esclavo ha terminado de enviar los datos:
