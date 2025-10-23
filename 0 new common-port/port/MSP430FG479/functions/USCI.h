@@ -20,12 +20,15 @@
 void USCI_reset();
 void USCI_setup();
 void USCI_init();
+void USCI_B_init();
 
 void init_UART_GPIO();
 
 void USCI_clk_ref(char clk_ref);
+void USCI_B_clk_ref(char clk_ref);
 
 void USCI_interrupt_enable(bool enable_USCI_interr_rx, bool enable_USCI_interr_tx);
+void USCI_B_interrupt_enable(bool enable_USCI_interr_rx, bool enable_USCI_interr_tx);
 
 
 //*****************************************************************************
@@ -52,6 +55,7 @@ void character_format_sel(bool parity_enable, char parity_type, int num_data_bit
 
 // USCI mode
 void USCI_mode_sel(char USCI_mode);
+void USCI_B_mode_sel(char USCI_mode);
 
 void data_to_transmit(uint8_t data);
 
@@ -75,11 +79,16 @@ void IrDA_decoding_filter(bool IrDA_dec_filter_enabled, int IrDA_Receive_Filter_
 //*****************************************************************************
 
 void SPI_char_format(int SPI_length, char first_Byte_sent);
+void SPI_B_char_format(int SPI_length, char first_Byte_sent);
 
 void USCI_SPI_pin_setup();
+void USCI_SPI_B_pin_setup();
 
 void SPI_mode_config(char Master_Slave);
+void SPI_B_mode_config(char Master_Slave);
 
 void SPI_clk_division(int clk_div);
+void SPI_B_clk_division(int clk_div);
 
 void SPI_clk_polarity_phase(char inactive_state, char data_on_clock_edge);
+void SPI_B_clk_polarity_phase(char inactive_state, char data_on_clock_edge);

@@ -40,28 +40,28 @@ void send_values(INTAN_config_struct* INTAN_config, uint16_t pckt_count){
     uint8_t rx_packet_3 = 3;
     uint8_t rx_packet_4 = 4;
 
-    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-    UCA0TXBUF = INTAN_config->array1[pckt_count];
-    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-    rx_packet_1=UCA0RXBUF;
+    while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?
+    UCB0TXBUF = INTAN_config->array1[pckt_count];
+    while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_1=UCB0RXBUF;
     __delay_cycles(CLK_2_CYCLES);
 
-    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-    UCA0TXBUF = INTAN_config->array2[pckt_count];
-    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-    rx_packet_2=UCA0RXBUF;
+    while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?
+    UCB0TXBUF = INTAN_config->array2[pckt_count];
+    while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_2=UCB0RXBUF;
     __delay_cycles(CLK_2_CYCLES);
 
-    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
-    UCA0TXBUF = INTAN_config->array3[pckt_count];
-    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-    rx_packet_3=UCA0RXBUF;
+    while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?              
+    UCB0TXBUF = INTAN_config->array3[pckt_count];
+    while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_3=UCB0RXBUF;
     __delay_cycles(CLK_2_CYCLES);
 
-    while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?              
-    UCA0TXBUF = INTAN_config->array4[pckt_count];
-    while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-    rx_packet_4=UCA0RXBUF;
+    while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?              
+    UCB0TXBUF = INTAN_config->array4[pckt_count];
+    while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
+    rx_packet_4=UCB0RXBUF;
     __delay_cycles(CLK_2_CYCLES);
 
     
@@ -396,10 +396,10 @@ void convert_N_channels(INTAN_config_struct* INTAN_config){
 
 uint8_t SPI_READ_BYTE(uint8_t TX){
         uint8_t RX;
-        while (!(IFG2 & UCA0TXIFG));  /* espera TX listo */
-        UCA0TXBUF = TX++;
-        while (!(IFG2 & UCA0RXIFG));  /* espera dato RX */
-        RX = UCA0RXBUF;
+        while (!(IFG2 & UCB0TXIFG));  /* espera TX listo */
+        UCB0TXBUF = TX++;
+        while (!(IFG2 & UCB0RXIFG));  /* espera dato RX */
+        RX = UCB0RXBUF;
         return RX;
 }
 

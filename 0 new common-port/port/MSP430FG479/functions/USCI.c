@@ -23,6 +23,10 @@ void USCI_init(){
     UCA0CTL1 &= ~(UCSWRST);
 }
 
+void USCI_B_init(){
+    //Reset the bit UCSWRST in register USCI_A0 Control Register 1 
+    UCB0CTL1 &= ~(UCSWRST);
+}
 
 void init_UART_GPIO()
 {
@@ -53,6 +57,28 @@ void USCI_clk_ref(char clk_ref){
     }
 }
 
+void USCI_B_clk_ref(char clk_ref){
+    /*clk_ref:
+        U --> UCLK
+        A --> ACLK
+        S --> SMCLK        
+    */
+    UCB0CTL1 &= ~(UCSSEL_0|UCSSEL_1|UCSSEL_2|UCSSEL_3);
+    switch (clk_ref) {
+        case 'U': //UCLK
+            UCB0CTL1|=UCSSEL_0;
+            break;
+        case 'A': //ACLK
+            UCB0CTL1|=UCSSEL_1;
+            break;
+        case 'S': //SMCLK
+            UCB0CTL1|=UCSSEL_2;
+            break;
+        default:
+            perror("Error: Not available clk reference in USART.");
+            break;
+    }
+}
 
 void USCI_interrupt_enable(bool enable_USCI_interr_rx, bool enable_USCI_interr_tx){
     IE2 &= ~(UCA0RXIE|UCA0TXIE);
@@ -60,6 +86,16 @@ void USCI_interrupt_enable(bool enable_USCI_interr_rx, bool enable_USCI_interr_t
         IE2 |= UCA0RXIE;                 // Enable USCI_A0 RX interrupt
     }else if (enable_USCI_interr_tx){
         IE2 |= UCA0TXIE;                 // Enable USCI_A0 TX interrupt
+
+    };
+}
+
+void USCI_B_interrupt_enable(bool enable_USCI_interr_rx, bool enable_USCI_interr_tx){
+    IE2 &= ~(UCB0RXIE|UCB0TXIE);
+    if (enable_USCI_interr_rx){
+        IE2 |= UCB0RXIE;                 // Enable USCI_B0 RX interrupt
+    }else if (enable_USCI_interr_tx){
+        IE2 |= UCB0TXIE;                 // Enable USCI_B0 TX interrupt
 
     };
 }
@@ -161,6 +197,32 @@ void USCI_mode_sel(char USCI_mode){
     }
 }
 
+
+
+
+void USCI_B_mode_sel(char USCI_mode){
+    //U --> Uart
+    //I --> IDLE-LINE MULTIPROCESSOR MODE
+    //D --> ADDRESS-BIT MULTIPROCESSOR MODE
+    //A --> UART MODE WITH AUTOMATIC BAUD RATE DETECTION
+    UCB0CTL0 &= ~(UCMODE0|UCMODE1);
+    switch (USCI_mode) {
+        case 'U': //UART
+            break;
+        case 'I': //IDLE-LINE MULTIPROCESSOR MODE
+            UCB0CTL0 |= UCMODE0;
+            break;
+        case 'D': //ADDRESS-BIT MULTIPROCESSOR MODE
+            UCB0CTL0 |= UCMODE1;
+            break;
+        case 'A'://UART MODE WITH AUTOMATIC BAUD RATE DETECTION
+            UCB0CTL0 |= UCMODE1+UCMODE0;
+            break;
+        default:
+            perror("Error: Not available UART mode.");
+            break;
+    }
+}
 
 void data_to_transmit(uint8_t data){
     while (!(IFG2&UCA0TXIFG));                // The register for the data only can be written if the flag UCA0TXIFG is up
@@ -620,6 +682,11 @@ void USCI_SPI_pin_setup(){
     P3SEL |= BIT0;                            // P3.0 option select
   }
 
+void USCI_SPI_B_pin_setup(){
+    P3SEL |= BIT1+BIT2;                          // P3.2,3.1 option select miso, mosi
+    P3SEL |= BIT3;                            // P3.3 option select
+}
+
 void SPI_mode_config(char Master_Slave){
     /*
     Selection if the controller works as Master (M) or Slave (S)*/
@@ -627,6 +694,26 @@ void SPI_mode_config(char Master_Slave){
     switch (Master_Slave) {
         case 'M':
             UCA0CTL0 |= UCMST;
+            break;
+
+        case 'S':
+            break;
+
+        default:
+            perror("Error: Not available SPI mode configuration.");
+            break;
+
+    }
+}
+
+
+void SPI_B_mode_config(char Master_Slave){
+    /*
+    Selection if the controller works as Master (M) or Slave (S)*/
+    UCB0CTL0 &= ~(UCMST);
+    switch (Master_Slave) {
+        case 'M':
+            UCB0CTL0 |= UCMST;
             break;
 
         case 'S':
@@ -671,6 +758,40 @@ void SPI_char_format(int SPI_length, char first_Byte_sent){
     }
 }
 
+
+void SPI_B_char_format(int SPI_length, char first_Byte_sent){
+    UCB0CTL0 &= ~(UC7BIT|UCMSB);
+    switch (SPI_length) {
+        case 7:
+            UCB0CTL0 |= UC7BIT;
+            break;
+        
+        case 8:
+            break;
+
+        default:
+            perror("Error: Not available SPI char length format configuration.");
+            break;
+
+    }
+
+
+    switch (first_Byte_sent) {
+        case 'M':
+            UCB0CTL0 |= UCMSB;
+            break;
+        
+        case 'L':
+            break;
+
+        default:
+            perror("Error: Not available SPI char first byte sent format configuration.");
+            break;
+
+    }
+}
+
+
 void SPI_clk_division(int clk_div){
     //UCBRX = UCA0BR0 + UCA0BR1*256;
     int prod = round(clk_div/256);
@@ -681,6 +802,15 @@ void SPI_clk_division(int clk_div){
     UCA0MCTL = 0;                             // No modulation
 }
 
+void SPI_B_clk_division(int clk_div){
+    //UCBRX = UCA0BR0 + UCA0BR1*256;
+    int prod = round(clk_div/256);
+    UCB0BR1 = prod;
+    UCB0BR0 = clk_div-prod*256;
+
+    //reset the modulation value because with USCIB0 is recommended 
+    // UCB0MCTL = 0;                             // No modulation
+}
 
 void SPI_clk_polarity_phase(char inactive_state, char data_on_clock_edge){
     UCA0CTL0  &= ~(UCCKPH|UCCKPL);    //3-pin, 8-bit SPI master
@@ -704,6 +834,37 @@ void SPI_clk_polarity_phase(char inactive_state, char data_on_clock_edge){
             break;
         case 'A': //data cAptured on the first UCLK edge and changed on the following edge
             UCA0CTL0 |= UCCKPH;
+            break;
+        default:
+            perror("Error: Not available SPI clock polarity.");
+            break;
+
+    }
+}
+
+
+void SPI_B_clk_polarity_phase(char inactive_state, char data_on_clock_edge){
+    UCB0CTL0  &= ~(UCCKPH|UCCKPL);    //3-pin, 8-bit SPI master
+
+    switch (inactive_state) {
+        case 'L': // clock polarity inactive low
+
+            break;
+        
+        case 'H': // clock polarity inactive high
+            UCB0CTL0 |= UCCKPL;
+            break;
+        
+        default: 
+            perror("Error: Not available SPI clock polarity.");
+            break;
+    }
+
+    switch (data_on_clock_edge) {
+        case 'H': //data cHanged on the first UCLK edge and captured on the following edge
+            break;
+        case 'A': //data cAptured on the first UCLK edge and changed on the following edge
+            UCB0CTL0 |= UCCKPH;
             break;
         default:
             perror("Error: Not available SPI clock polarity.");
