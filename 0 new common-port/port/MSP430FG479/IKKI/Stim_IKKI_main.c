@@ -339,243 +339,244 @@ int main(void)
   // //************************** other parameters ************************** 
 
 
-    typedef enum {ENVIO_ECG, RX_PARAMS_ESP32, TX_PARAMS_INTAN, NEW_PARAM_OFF_WAIT} Estados;
-    Estados general_state = ENVIO_ECG;
+  typedef enum {ENVIO_ECG, RX_PARAMS_ESP32, TX_PARAMS_INTAN, NEW_PARAM_OFF_WAIT} Estados;
+  Estados general_state = ENVIO_ECG;
 
-    
-    typedef enum {STIM, REST} states_stimulation;
-    states_stimulation state_stimulation = REST;
+  
+  typedef enum {STIM, REST} states_stimulation;
+  states_stimulation state_stimulation = REST;
 
-    typedef enum {ON_P, OFF_P, ON_N, OFF_N} states_stimulation_ON_OFF;
-    states_stimulation_ON_OFF state_stimulation_ON_OFF = ON_P;
+  typedef enum {ON_P, OFF_P, ON_N, OFF_N} states_stimulation_ON_OFF;
+  states_stimulation_ON_OFF state_stimulation_ON_OFF = ON_P;
 
 
-    bool new_param = false;
+  bool new_param = false;
 
-    uint32_t stim_on_off_time = INTAN_config.stimulation_on_time;
-    uint32_t stim_rest_time = INTAN_config.stimulation_on_time;
+  uint32_t stim_on_off_time = INTAN_config.stimulation_on_time;
+  uint32_t stim_rest_time = INTAN_config.stimulation_on_time;
 
-    while(1){
-      switch (general_state) {
-        case ENVIO_ECG: // Estado 1: Muestreo del ECG y envío a través de SPI al ESP32
+  while(1){
+    switch (general_state) {
+      case ENVIO_ECG: // Estado 1: Muestreo del ECG y envío a través de SPI al ESP32
 
-          new_param = new_param_read();
-          if(new_param){
-            general_state = RX_PARAMS_ESP32;
-            break;
-          }else{
+        new_param = new_param_read();
+        if(new_param){
+          general_state = RX_PARAMS_ESP32;
+          break;
+        }else{
 
-            /*
-                    SEND TO ESP32 THE READ VALUES FROM ECG
-            */
+          /*
+                  SEND TO ESP32 THE READ VALUES FROM ECG
+          */
 
-            // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
-            OFF_CS_ESP_PARAM_pin();
-            while (!(SD16CCTL0 & SD16IFG));
-            my_register = SD16MEM0; // Save CH0 results (clears IFG)
-            high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
-            low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = 0x30;
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            RX = UCA0RXBUF;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = high_word;
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            RX = UCA0RXBUF;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            UCA0TXBUF = low_word;
-            while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-            RX = UCA0RXBUF;    
-            ON_CS_ESP_PARAM_pin();
-            
-            next_stim = button_pressed();
-            if(next_stim){  
-              number_of_stimulations_done = 0;
-            }
+          // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
+          OFF_CS_ESP_PARAM_pin();
+          while (!(SD16CCTL0 & SD16IFG));
+          my_register = SD16MEM0; // Save CH0 results (clears IFG)
+          high_word = (my_register >> 8) & 0xFFFF; // 8 bits superiores (0x1234)
+          low_word = my_register & 0xFFFF;         // 8 bits inferiores (0x5678)
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = 0x30;
+          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          RX = UCA0RXBUF;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = high_word;
+          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          RX = UCA0RXBUF;
+          while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+          UCA0TXBUF = low_word;
+          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          RX = UCA0RXBUF;    
+          ON_CS_ESP_PARAM_pin();
+          
+          next_stim = button_pressed();
+          if(next_stim){  
+            number_of_stimulations_done = 0;
+          }
 
-            /*
-              SEND DATA TO INTAN BECAUSE OF STATE CHANGE caused by a timer            
-            */
+          /*
+            SEND DATA TO INTAN BECAUSE OF STATE CHANGE caused by a timer            
+          */
 
-            if(TACTL & TAIFG){ // POLLING AL BIT DE INTERRUPCION DEL TIMER
-              TACTL &= ~TAIFG; // limpiar el flag
+          if(TACTL & TAIFG){ // POLLING AL BIT DE INTERRUPCION DEL TIMER
+            TACTL &= ~TAIFG; // limpiar el flag
 
-              timer_flag_stim_rest++;
-              timer_flag_on_off++;
+            timer_flag_stim_rest++;
+            timer_flag_on_off++;
 
-              if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
-                switch (state_stimulation) {
-                  case STIM:
+            if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
+              switch (state_stimulation) {
+                case STIM:
+                  if(timer_flag_stim_rest >= stim_rest_time){
+                    state_stimulation = REST;
+                    timer_flag_stim_rest = 0;
+                    stim_rest_time = INTAN_config.resting_time;
+                    number_of_stimulations_done++;
+                    INTAN_programmed = false;
+
+                    break;
+                  }
+                    switch (state_stimulation_ON_OFF) {
+                      case ON_P:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = OFF_P;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_off_time;
+                          INTAN_programmed = false;
+                          break;
+                        }          
+                        if(!INTAN_programmed){
+                          INTAN_config.stimulation_on[0] = 1;
+                          INTAN_config.stimulation_pol[0] = 'P';
+                          ON_INTAN(&INTAN_config);
+                          INTAN_programmed = true;
+                        }
+                        
+                        break;
+
+                      case OFF_P:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = ON_N;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_on_time;
+                          INTAN_programmed = false;
+                          break;
+                        }          
+                        if(!INTAN_programmed){
+                          OFF_INTAN(&INTAN_config);                          
+                          INTAN_programmed = true;
+                        }
+                        
+                        
+                        break;
+
+                      case ON_N:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = OFF_N;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_off_time;
+                          INTAN_programmed = false;
+                          break;
+                        }
+                        if(!INTAN_programmed){
+                          INTAN_config.stimulation_on[0] = 1;
+                          INTAN_config.stimulation_pol[0] = 'N';
+                          ON_INTAN(&INTAN_config);
+                          INTAN_programmed = true;
+                        }
+
+                        
+                        break;
+
+                      case  OFF_N:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = ON_P;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_on_time;
+                          INTAN_programmed = false;
+                          break;
+                        }
+                        if(!INTAN_programmed){
+                          // initialize_INTAN(&INTAN_config);
+                          call_configuration_functions(&INTAN_config);
+                          OFF_INTAN(&INTAN_config);
+
+                          INTAN_programmed = true;
+                        }
+                        break;
+
+                    }
+                  break;
+
+                case REST:
                     if(timer_flag_stim_rest >= stim_rest_time){
-                      state_stimulation = REST;
+                      state_stimulation = STIM;
                       timer_flag_stim_rest = 0;
-                      stim_rest_time = INTAN_config.resting_time;
-                      number_of_stimulations_done++;
+                      stim_rest_time = INTAN_config.stimulation_time;
+                      state_stimulation_ON_OFF = ON_P;
                       INTAN_programmed = false;
-
                       break;
                     }
-                      switch (state_stimulation_ON_OFF) {
-                        case ON_P:
-                          if(timer_flag_on_off >= stim_on_off_time){
-                            state_stimulation_ON_OFF = OFF_P;
-                            timer_flag_on_off = 0;
-                            stim_on_off_time = INTAN_config.stimulation_off_time;
-                            INTAN_programmed = false;
-                            break;
-                          }          
-                          if(!INTAN_programmed){
-                            INTAN_config.stimulation_on[0] = 1;
-                            INTAN_config.stimulation_pol[0] = 'P';
-                            ON_INTAN(&INTAN_config);
-                            INTAN_programmed = true;
-                          }
-                          
-                          break;
-
-                        case OFF_P:
-                          if(timer_flag_on_off >= stim_on_off_time){
-                            state_stimulation_ON_OFF = ON_N;
-                            timer_flag_on_off = 0;
-                            stim_on_off_time = INTAN_config.stimulation_on_time;
-                            INTAN_programmed = false;
-                            break;
-                          }          
-                          if(!INTAN_programmed){
-                            OFF_INTAN(&INTAN_config);                          
-                            INTAN_programmed = true;
-                          }
-                          
-                          
-                          break;
-
-                        case ON_N:
-                          if(timer_flag_on_off >= stim_on_off_time){
-                            state_stimulation_ON_OFF = OFF_N;
-                            timer_flag_on_off = 0;
-                            stim_on_off_time = INTAN_config.stimulation_off_time;
-                            INTAN_programmed = false;
-                            break;
-                          }
-                          if(!INTAN_programmed){
-                            INTAN_config.stimulation_on[0] = 1;
-                            INTAN_config.stimulation_pol[0] = 'N';
-                            ON_INTAN(&INTAN_config);
-                            INTAN_programmed = true;
-                          }
-
-                          
-                          break;
-
-                        case  OFF_N:
-                          if(timer_flag_on_off >= stim_on_off_time){
-                            state_stimulation_ON_OFF = ON_P;
-                            timer_flag_on_off = 0;
-                            stim_on_off_time = INTAN_config.stimulation_on_time;
-                            INTAN_programmed = false;
-                            break;
-                          }
-                          if(!INTAN_programmed){
-                            // initialize_INTAN(&INTAN_config);
-                            call_configuration_functions(&INTAN_config);
-                            OFF_INTAN(&INTAN_config);
-
-                            INTAN_programmed = true;
-                          }
-                          break;
-
-                      }
-                    break;
-
-                  case REST:
-                      if(timer_flag_stim_rest >= stim_rest_time){
-                        state_stimulation = STIM;
-                        timer_flag_stim_rest = 0;
-                        stim_rest_time = INTAN_config.stimulation_time;
-                        state_stimulation_ON_OFF = ON_P;
-                        INTAN_programmed = false;
-                        break;
-                      }
-                      if(!INTAN_programmed){
-                        OFF_INTAN(&INTAN_config);
-                        INTAN_programmed = true;
-                      }
-                    break;
-                
-                }
-              }else{
-                next_stim = button_pressed();
-                OFF_pin();
+                    if(!INTAN_programmed){
+                      OFF_INTAN(&INTAN_config);
+                      INTAN_programmed = true;
+                    }
+                  break;
+              
               }
+            }else{
+              next_stim = button_pressed();
+              OFF_pin();
             }
-
           }
 
-          break;
-          
+        }
 
-        case RX_PARAMS_ESP32: // Estado 2: Recepción de parámetros de estimulación nuevos a través del ESP32
-          ON_ACK_param();
-          __delay_cycles(8000);
-
-
-          ON_ESP32_LED(); // se mantiene el led de recepción encendido como indicador para el usuario
-          OFF_CS_ESP_PARAM_pin();
-          UCA0TXBUF = 0x10;
-          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
-          INTAN_config.number_of_stimulations = UCA0RXBUF;
-          UCA0TXBUF = 0x20;
-          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
-          resting_time_minutes = UCA0RXBUF;
-          UCA0TXBUF = 0x30;
-          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
-          stimulation_time_seconds = UCA0RXBUF;
-          UCA0TXBUF = 0x40;
-          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
-          high_byte_stimulation_on_time_micro = UCA0RXBUF;
-          UCA0TXBUF = 0x50;
-          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
-          low_byte_stimulation_on_time_micro = UCA0RXBUF;
-          UCA0TXBUF = 0x60;
-          while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
-          stimulation_off_time_milis = UCA0RXBUF;
-          ON_CS_ESP_PARAM_pin();
-          stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
-
-          INTAN_config.resting_time = resting_time_minutes*60*FREQ_MASTER/divider_value;
-          INTAN_config.stimulation_time = stimulation_time_seconds*FREQ_MASTER/divider_value/6;
-          INTAN_config.stimulation_on_time = stimulation_on_time_micro*(FREQ_MASTER/divider_value)/1000000;
-          // INTAN_config.stimulation_on_time = stimulation_on_time_micro*FREQ_MASTER/(1000000*divider_value);
-          INTAN_config.stimulation_off_time = stimulation_off_time_milis*FREQ_MASTER/(1000*divider_value);
-
-          general_state = NEW_PARAM_OFF_WAIT;
-          break;
+        break;
         
-        case NEW_PARAM_OFF_WAIT:
-          new_param = new_param_read();
-          if(!new_param){
-            general_state = TX_PARAMS_INTAN;
-            break;
-          }
-          
-          break;
-        case TX_PARAMS_INTAN: // Estado 3: actualización de parámetros de estimulación del INTAN
 
-          general_state = ENVIO_ECG;
-          number_of_stimulations_done = 100;
-          OFF_ACK_param();
-          break;
-        default:
-          break;
+      case RX_PARAMS_ESP32: // Estado 2: Recepción de parámetros de estimulación nuevos a través del ESP32
+        ON_ACK_param();
+        __delay_cycles(8000);
 
-      }
 
-      // Comprobar los flags del timer y actualizar parámetros del INTAN si es necesario
+        ON_ESP32_LED(); // se mantiene el led de recepción encendido como indicador para el usuario
+        OFF_CS_ESP_PARAM_pin();
+        UCA0TXBUF = 0x10;
+        while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+        INTAN_config.number_of_stimulations = UCA0RXBUF;
+        UCA0TXBUF = 0x20;
+        while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+        resting_time_minutes = UCA0RXBUF;
+        UCA0TXBUF = 0x30;
+        while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+        stimulation_time_seconds = UCA0RXBUF;
+        UCA0TXBUF = 0x40;
+        while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+        high_byte_stimulation_on_time_micro = UCA0RXBUF;
+        UCA0TXBUF = 0x50;
+        while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+        low_byte_stimulation_on_time_micro = UCA0RXBUF;
+        UCA0TXBUF = 0x60;
+        while (!(IFG2 & UCA0RXIFG));              // USART1 TX buffer ready?
+        stimulation_off_time_milis = UCA0RXBUF;
+        ON_CS_ESP_PARAM_pin();
+        stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
 
+        // INTAN_config.resting_time = resting_time_minutes*FREQ_MASTER/divider_value;
+        INTAN_config.resting_time = resting_time_minutes*60*FREQ_MASTER/divider_value;
+        INTAN_config.stimulation_time = stimulation_time_seconds*FREQ_MASTER/divider_value;
+        INTAN_config.stimulation_on_time = stimulation_on_time_micro*(FREQ_MASTER/divider_value)/1000000;
+        // INTAN_config.stimulation_on_time = stimulation_on_time_micro*FREQ_MASTER/(1000000*divider_value);
+        INTAN_config.stimulation_off_time = stimulation_off_time_milis*FREQ_MASTER/(1000*divider_value);
+
+        general_state = NEW_PARAM_OFF_WAIT;
+        break;
       
+      case NEW_PARAM_OFF_WAIT:
+        new_param = new_param_read();
+        if(!new_param){
+          general_state = TX_PARAMS_INTAN;
+          break;
+        }
+        
+        break;
+      case TX_PARAMS_INTAN: // Estado 3: actualización de parámetros de estimulación del INTAN
 
+        general_state = ENVIO_ECG;
+        number_of_stimulations_done = 100;
+        OFF_ACK_param();
+        break;
+      default:
+        break;
+
+    }
+
+    // Comprobar los flags del timer y actualizar parámetros del INTAN si es necesario
 
     
-    }
+
+
+  
+  }
 }

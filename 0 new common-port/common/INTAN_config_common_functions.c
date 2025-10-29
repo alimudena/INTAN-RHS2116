@@ -174,11 +174,11 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
     bool checked_rcvd = check_received_commands(INTAN_config);
     if (!checked_rcvd){
         // while(1){
-            ON_INTAN_LED();
+        OFF_INTAN_LED();
             // perror("ERROR RECEIVING.");
         // }
     }else{
-         OFF_INTAN_LED();
+        ON_INTAN_LED();
     }
     INTAN_config->max_size = 0;
 }
@@ -864,12 +864,6 @@ void stimulation_enable(INTAN_config_struct* INTAN_config){
 
 void ON_INTAN(INTAN_config_struct* INTAN_config){
 
-    /*
-            CONSTANT CURRENT STIMULATOR
-    */
-    stimulation_enable(INTAN_config);
-
-    send_SPI_commands(INTAN_config);
 
     /*
             COMPLIANCE MONITOR
@@ -890,6 +884,12 @@ void ON_INTAN(INTAN_config_struct* INTAN_config){
     read_command(INTAN_config, 255, 'E');
     send_SPI_commands(INTAN_config);
 
+    /*
+            CONSTANT CURRENT STIMULATOR
+    */
+    stimulation_enable(INTAN_config);
+
+    send_SPI_commands(INTAN_config);
 
     /*
             U AND M FLAGS

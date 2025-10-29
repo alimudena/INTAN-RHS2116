@@ -77,7 +77,8 @@ void setup_CLK(CLK_config_struct CLK_config) {
   CLK_config.DCOPLUS_on =
       true;                // If D factor is wanted to be applied then -> True
   CLK_config.D_val = 2;    // Max 8
-  CLK_config.N_MCLK = 121; // Max 127
+  // CLK_config.N_MCLK = 121; // Max 127
+  CLK_config.N_MCLK = 95; // Max 127
   configuring_DCO(CLK_config.DCOPLUS_on, CLK_config.D_val);
   configure_N_for_MCLK(CLK_config.N_MCLK);
   // MCLK
