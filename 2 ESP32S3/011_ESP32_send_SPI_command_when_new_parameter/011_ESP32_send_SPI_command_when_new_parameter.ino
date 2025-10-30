@@ -118,17 +118,17 @@ class MyCallbacks : public BLECharacteristicCallbacks {
 
         number_of_stimulations_done = 0;
 
-        Serial.print("number_of_stimulations: ");
-        Serial.println(number_of_stimulations);
-        Serial.print("resting_time: ");
-        Serial.println(resting_time);
-        Serial.print("stimulation_time: ");
-        Serial.println(stimulation_time);
+        // Serial.print("number_of_stimulations: ");
+        // Serial.println(number_of_stimulations);
+        // Serial.print("resting_time: ");
+        // Serial.println(resting_time);
+        // Serial.print("stimulation_time: ");
+        // Serial.println(stimulation_time);
 
-        Serial.print("stimulation_on_time [us]: ");
-        Serial.println(stimulation_on_time, 3);
-        Serial.print("stimulation_off_time [us]: ");
-        Serial.println(stimulation_off_time, 3);
+        // Serial.print("stimulation_on_time [us]: ");
+        // Serial.println(stimulation_on_time, 3);
+        // Serial.print("stimulation_off_time [us]: ");
+        // Serial.println(stimulation_off_time, 3);
 
 
       } else {
@@ -256,16 +256,17 @@ void loop() {
 
   //   // Pequeña pausa opcional para evitar saturar el loop
   //   delay(1);
-  if (parameters_updated){
+  if (parameters_updated && !sent){
     spi_tx_buf[0] = 0xA5;  // Código de comando
     spi_tx_buf[1] = 0xA6;  // Código de comando
     ON_SEND_PIN(); 
     received_bytes = slave.transfer(spi_tx_buf, spi_rx_buf, SPI_data_send);
+    sent = true;
   }
   received_ack = ACK_RECEIVED();
-  if(received_ack & !sent){
+  if(received_ack && sent){
     OFF_SEND_PIN();
-    sent = true;
+    sent = false;
     Serial.println("received ACK");
     // Comprobación del resultado
     Serial.print("Transacción SPI completada. Bytes recibidos: ");
@@ -280,15 +281,8 @@ void loop() {
       Serial.printf("%02X ", spi_rx_buf[i]);
     }
     Serial.println();
-    Serial.print("Datos enviados al maestro: ");
-    for (size_t i = 0; i < received_bytes; ++i) {
-      Serial.printf("%02X ", spi_tx_buf[i]);
-    }
-    Serial.println();
     parameters_updated = false;
     
-  }else if(!received_ack){ // este reloj va mucho más rápido, necesitamos tener un control sobre el flag del maestro para poder enviar otros parámetros nuevos
-    sent = false;
   }
   
 

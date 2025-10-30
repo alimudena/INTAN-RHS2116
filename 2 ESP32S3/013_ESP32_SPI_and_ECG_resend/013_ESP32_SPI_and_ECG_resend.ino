@@ -262,7 +262,7 @@ void loop() {
 
     spi_tx_buf[0] = number_of_stimulations;  // number_of_stimulations
     spi_tx_buf[1] = resting_time;  // Código de comando
-    spi_tx_buf[2] = stimulation_time;  // Código de comando
+    spi_tx_buf[2] = stimulation_time;  // Código de co mando
     spi_tx_buf[3] = high_byte_stimulation_on;  // Código de comando
     spi_tx_buf[4] = low_byte_stimulation_on;  // Código de comando
     spi_tx_buf[5] = stimulation_off_time;  // Código de comando

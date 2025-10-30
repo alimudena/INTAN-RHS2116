@@ -267,8 +267,8 @@ void loop() {
     spi_tx_buf[4] = low_byte_stimulation_on;  // Código de comando
     spi_tx_buf[5] = stimulation_off_time;  // Código de comando
 
-    ON_SEND_PIN(); 
     received_bytes = slave.transfer(spi_tx_buf, spi_rx_buf, SPI_data_send);
+    ON_SEND_PIN(); 
   }
   received_ack = ACK_RECEIVED();
   if(received_ack & !sent){
