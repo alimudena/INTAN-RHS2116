@@ -154,14 +154,14 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
             // wait_1_second();
             
             OFF_CS_INTAN_pin();
-            __delay_cycles(CLK_5_CYCLES);
+            // __delay_cycles(CLK_5_CYCLES);
 
             send_values(INTAN_config, pckt_count);
             
-            __delay_cycles(CLK_5_CYCLES);
+            // __delay_cycles(CLK_5_CYCLES);
             ON_CS_INTAN_pin();   
             
-            __delay_cycles(CLK_10_CYCLES);
+            // __delay_cycles(CLK_10_CYCLES);
 
             if(INTAN_config->time_restriction[pckt_count]){
                 wait_1_second();
@@ -863,7 +863,15 @@ void stimulation_enable(INTAN_config_struct* INTAN_config){
 
 
 void ON_INTAN(INTAN_config_struct* INTAN_config){
-
+    
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+    //To make sure the polarity is well written
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
 
     /*
             COMPLIANCE MONITOR
@@ -873,13 +881,19 @@ void ON_INTAN(INTAN_config_struct* INTAN_config){
     send_SPI_commands(INTAN_config);
     disable_U_flag(INTAN_config);
     /*
-            CONSTANT CURRENT STIMULATOR // positive polarity
+            CONSTANT CURRENT STIMULATOR 
     */
     stimulation_polarity(INTAN_config); 
     send_SPI_commands(INTAN_config);
-
+    //To make sure the polarity is well written
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
 
     // stimulators on
+    stimulation_on(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    //To make sure the stimulation is on
     stimulation_on(INTAN_config);
     read_command(INTAN_config, 255, 'E');
     send_SPI_commands(INTAN_config);
@@ -888,7 +902,9 @@ void ON_INTAN(INTAN_config_struct* INTAN_config){
             CONSTANT CURRENT STIMULATOR
     */
     stimulation_enable(INTAN_config);
-
+    send_SPI_commands(INTAN_config);
+    //To make sure the stimulation is enabled
+    stimulation_enable(INTAN_config);
     send_SPI_commands(INTAN_config);
 
     /*
@@ -900,11 +916,132 @@ void ON_INTAN(INTAN_config_struct* INTAN_config){
     send_SPI_commands(INTAN_config);
     disable_U_flag(INTAN_config);
     disable_M_flag(INTAN_config);
+
+
+    //To make sure the flags are settled up
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
 }
+
+
+void ON_INTAN_SHORT(INTAN_config_struct* INTAN_config){
+    
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+    //To make sure the polarity is well written
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+
+    /*
+            COMPLIANCE MONITOR
+    */
+    enable_U_flag(INTAN_config);
+    clean_compliance_monitor(INTAN_config);
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+    //To make sure the polarity is well written
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+
+    // stimulators on
+    stimulation_on(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    //To make sure the stimulation is on
+    stimulation_on(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+
+    /*
+            CONSTANT CURRENT STIMULATOR
+    */
+    stimulation_enable(INTAN_config);
+    send_SPI_commands(INTAN_config);
+    //To make sure the stimulation is enabled
+    stimulation_enable(INTAN_config);
+    send_SPI_commands(INTAN_config);
+
+    /*
+            U AND M FLAGS
+    */
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+
+
+    //To make sure the flags are settled up
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+}
+
+void ON_INTAN_STIM(INTAN_config_struct* INTAN_config){
+    
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+    //To make sure the polarity is well written
+    stimulation_polarity(INTAN_config); 
+    send_SPI_commands(INTAN_config);
+
+
+    /*
+            CONSTANT CURRENT STIMULATOR
+    */
+    stimulation_enable(INTAN_config);
+    send_SPI_commands(INTAN_config);
+    //To make sure the stimulation is enabled
+    stimulation_enable(INTAN_config);
+    send_SPI_commands(INTAN_config);
+
+    /*
+            U AND M FLAGS
+    */
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+
+
+    //To make sure the flags are settled up
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+}
+
 
 void OFF_INTAN(INTAN_config_struct* INTAN_config){
     stimulation_disable(INTAN_config);
     send_SPI_commands(INTAN_config);
+    //To make sure the stimulation is disabled
+    stimulation_disable(INTAN_config);
+    send_SPI_commands(INTAN_config);
+    // connect_channel_to_gnd(INTAN_config, 0);
 }
 
 // Clean the compliance monitor register

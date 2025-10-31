@@ -21,3 +21,5 @@ typedef struct{
 
 void general_setup(CLK_config_struct CLK_config);
 void setup_CLK(CLK_config_struct CLK_config);
+void run_functions_setup_CLK(CLK_config_struct CLK_config);
+

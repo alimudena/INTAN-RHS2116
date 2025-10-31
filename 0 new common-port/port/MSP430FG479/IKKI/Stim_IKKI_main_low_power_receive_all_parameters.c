@@ -114,7 +114,7 @@ uint16_t step_DAC = 0;
 
 
 
-uint32_t divider_value = 0x028F;
+uint32_t divider_value = 0x029A;
 
 uint8_t RX;
 
@@ -260,6 +260,8 @@ void configure_INTAN(INTAN_config_struct* INTAN_config){
   INTAN_config->positive_current_magnitude[0] = 100;
   INTAN_config->positive_current_trim[0] = 0x80;
 
+  INTAN_config->MASTER_FREQ = 4200000;
+
 
   /*
     CURRENT LIMITED CHARGE RECOVERY CIRCUIT
@@ -309,6 +311,7 @@ void update_stim_parameters(){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'P';
                 ON_INTAN(&INTAN_config);
+                ON_INTAN(&INTAN_config);
                 INTAN_programmed = true;
               }
               
@@ -323,6 +326,7 @@ void update_stim_parameters(){
                 break;
               }          
               if(!INTAN_programmed){
+                OFF_INTAN(&INTAN_config);                          
                 OFF_INTAN(&INTAN_config);                          
                 INTAN_programmed = true;
               }
@@ -342,6 +346,7 @@ void update_stim_parameters(){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'N';
                 ON_INTAN(&INTAN_config);
+                ON_INTAN(&INTAN_config);
                 INTAN_programmed = true;
               }
 
@@ -358,9 +363,9 @@ void update_stim_parameters(){
               }
               if(!INTAN_programmed){
                 // initialize_INTAN(&INTAN_config);
-                call_configuration_functions(&INTAN_config);
+                // call_configuration_functions(&INTAN_config);
                 OFF_INTAN(&INTAN_config);
-
+                OFF_INTAN(&INTAN_config);
                 INTAN_programmed = true;
               }
               break;
@@ -390,6 +395,57 @@ void update_stim_parameters(){
   }
 }
 
+void config_CLK(CLK_config_struct* CLK_config){
+  // Modo de operación
+  /*    mode:
+          - A: Active
+          - L: Low Power
+              - 0: LPM0
+              - 1: LPM1
+              - 2: LPM2
+              - 3: LPM3
+  */
+  CLK_config->operating_mode = 'A';
+  // Oscilador LFXT1
+  /*
+      L: Low Frequency Mode --> f auxiliar de 323kHz conectado
+      H: High Frequency Mode
+  */
+  CLK_config->LFXT1_wk_mode = 'L';
+  // Configura la capacidad interna del LFXT1
+  /*0  --> XIN Cap = XOUT Cap = 0pf */
+  /*10 --> XIN Cap = XOUT Cap = 10pf */
+  /*14 --> XIN Cap = XOUT Cap = 14pf */
+  /*18 --> XIN Cap = XOUT Cap = 18pf */
+  CLK_config->LFXT1_int_cap = 18;
+  // DCO
+  // Rango de frecuencia de trabajo del DCO:
+  /*2 --> fDCOCLK =   1.4-12MHz*/
+  /*3 --> fDCOCLK =   2.2-17Mhz*/
+  /*4 --> fDCOCLK =   3.2-25Mhz*/ //-> 8 MHz
+  /*8 --> fDCOCLK =     5-40Mhz*/
+  CLK_config->DCO_range = 4;
+  // Values for setting the frequency of the DCO+
+  // DCO+ set so freq= xtal x D x N_MCLK+1
+  // XTAL --> 32767Hz
+  CLK_config->DCOPLUS_on = true;                // If D factor is wanted to be applied then -> True
+  CLK_config->D_val = 2;    // Max 8
+  CLK_config->N_MCLK = 127; // Max 127
+  // CLK_config->N_MCLK = 95; // Max 127
+  // MCLK
+  // Reference selection for MCLK
+  CLK_config->ref_MCLK = 'D'; //  D: DCO, X: XT2, A: LFXT1
+  // ACLK
+  // ACLK division for configuring ACLK/N
+  CLK_config->divider_ACLK = 1; // 1, 2, 4, 8
+  // SMCLK
+  //  Reference for SMCLK
+  CLK_config->ref_SMCLK = 'D'; // D: DCO, X: XT2, N: OFF
+  // LFXT2
+  // Second oscillator ON OFF
+  CLK_config->LFXT2_osc_on = false;
+}
+
 int main(void)
 {
 
@@ -402,7 +458,8 @@ int main(void)
 
 
   //************************** CLK configuration *****************************
-  setup_CLK(CLK_config);
+  config_CLK(&CLK_config);
+  run_functions_setup_CLK(CLK_config);
 
   //************************** LED configuration *****************************
   toggle_setup();
@@ -467,7 +524,10 @@ int main(void)
     OFF_ESP32_LED();
   }
 
-
+//DELETE?
+  // ON_INTAN(&INTAN_config);
+  // OFF_INTAN(&INTAN_config);
+//DELETE?
 
 
   /* COMMON CONFIGURATION */
@@ -545,7 +605,7 @@ if(esp32_connected){
 
       case RX_PARAMS_ESP32:{// Estado 2: Recepción de parámetros de estimulación nuevos a través del ESP32
         ON_ACK_param();
-        __delay_cycles(8000);
+        __delay_cycles(1000);
 
 
         OFF_CS_ESP_PARAM_pin();
@@ -585,10 +645,10 @@ if(esp32_connected){
         stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
         step_DAC = ((uint16_t)high_byte_step_DAC << 8) | low_byte_step_DAC;
 
-        INTAN_config.resting_time = resting_time_seconds*60*FREQ_MASTER/divider_value;
-        INTAN_config.stimulation_time = stimulation_time_seconds*FREQ_MASTER/divider_value/6;
-        INTAN_config.stimulation_on_time = stimulation_on_time_micro*(FREQ_MASTER/divider_value)/1000000;
-        INTAN_config.stimulation_off_time = stimulation_off_time_milis*FREQ_MASTER/(1000*divider_value);
+        INTAN_config.resting_time = resting_time_seconds*60*INTAN_config.MASTER_FREQ /divider_value;
+        INTAN_config.stimulation_time = stimulation_time_seconds*INTAN_config.MASTER_FREQ/divider_value/6;
+        INTAN_config.stimulation_on_time = stimulation_on_time_micro*(INTAN_config.MASTER_FREQ/divider_value)/1000000*0.4;
+        INTAN_config.stimulation_off_time = stimulation_off_time_milis*INTAN_config.MASTER_FREQ/(1000*divider_value)*1.85;
 
         INTAN_config.step_DAC = step_DAC; 
 

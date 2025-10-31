@@ -44,25 +44,25 @@ void send_values(INTAN_config_struct* INTAN_config, uint16_t pckt_count){
     UCB0TXBUF = INTAN_config->array1[pckt_count];
     while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_1=UCB0RXBUF;
-    __delay_cycles(CLK_2_CYCLES);
+    // __delay_cycles(CLK_2_CYCLES);
 
     while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?
     UCB0TXBUF = INTAN_config->array2[pckt_count];
     while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_2=UCB0RXBUF;
-    __delay_cycles(CLK_2_CYCLES);
+    // __delay_cycles(CLK_2_CYCLES);
 
     while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?              
     UCB0TXBUF = INTAN_config->array3[pckt_count];
     while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_3=UCB0RXBUF;
-    __delay_cycles(CLK_2_CYCLES);
+    // __delay_cycles(CLK_2_CYCLES);
 
     while (!(IFG2 & UCB0TXIFG));              // USART1 TX buffer ready?              
     UCB0TXBUF = INTAN_config->array4[pckt_count];
     while (!(IFG2 & UCB0RXIFG));  // espera que RXBUF tenga el dato recibido
     rx_packet_4=UCB0RXBUF;
-    __delay_cycles(CLK_2_CYCLES);
+    // __delay_cycles(CLK_2_CYCLES);
 
     
     uint32_t rx_value = ((uint32_t)rx_packet_1 << 24) |

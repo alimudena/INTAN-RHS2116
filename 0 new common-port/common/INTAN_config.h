@@ -4,8 +4,8 @@
 #ifndef INTAN_CONFIG_H
 #define INTAN_CONFIG_H
 
-// #define FREQ_MASTER 8000000U
-#define FREQ_MASTER 6000000U
+#define FREQ_MASTER 8000000U
+// #define FREQ_MASTER 6000000U
 
 #define CLK_30_S_CYCLES (30 * FREQ_MASTER)
 #define CLK_3_S_CYCLES (3 * FREQ_MASTER)
@@ -127,6 +127,8 @@ typedef struct{
     uint8_t positive_current_trim[NUM_CHANNELS];
     uint8_t positive_current_magnitude[NUM_CHANNELS];
 
+    uint32_t MASTER_FREQ; 
+
     
 
     } INTAN_config_struct;
@@ -177,6 +179,8 @@ void stimulation_enable(INTAN_config_struct* INTAN_config);
 
 
 void ON_INTAN(INTAN_config_struct* INTAN_config);
+void ON_INTAN_SHORT(INTAN_config_struct* INTAN_config);
+void ON_INTAN_STIM(INTAN_config_struct* INTAN_config);
 void OFF_INTAN(INTAN_config_struct* INTAN_config);
 
 /*

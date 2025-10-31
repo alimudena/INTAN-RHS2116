@@ -77,8 +77,8 @@ void setup_CLK(CLK_config_struct CLK_config) {
   CLK_config.DCOPLUS_on =
       true;                // If D factor is wanted to be applied then -> True
   CLK_config.D_val = 2;    // Max 8
-  // CLK_config.N_MCLK = 121; // Max 127
-  CLK_config.N_MCLK = 95; // Max 127
+  CLK_config.N_MCLK = 121; // Max 127
+  // CLK_config.N_MCLK = 95; // Max 127
   configuring_DCO(CLK_config.DCOPLUS_on, CLK_config.D_val);
   configure_N_for_MCLK(CLK_config.N_MCLK);
   // MCLK
@@ -99,3 +99,25 @@ void setup_CLK(CLK_config_struct CLK_config) {
   LFXT2_disable(CLK_config.LFXT2_osc_on);
 }
 
+
+void run_functions_setup_CLK(CLK_config_struct CLK_config) {
+
+  select_operating_mode(CLK_config.operating_mode, 0);
+
+
+  LFXT1_working_mode(CLK_config.LFXT1_wk_mode);
+  LFXT1_internal_cap_config(CLK_config.LFXT1_int_cap);
+
+  DCO_f_range(CLK_config.DCO_range);
+
+  configuring_DCO(CLK_config.DCOPLUS_on, CLK_config.D_val);
+  configure_N_for_MCLK(CLK_config.N_MCLK);
+
+  select_reference_MCLK(CLK_config.ref_MCLK);
+
+  select_reference_SMCLK(CLK_config.ref_SMCLK);
+
+  configure_ACLK_N(CLK_config.divider_ACLK);
+
+  LFXT2_disable(CLK_config.LFXT2_osc_on);
+}
