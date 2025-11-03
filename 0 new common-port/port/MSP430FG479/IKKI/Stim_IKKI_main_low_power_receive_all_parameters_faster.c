@@ -415,7 +415,7 @@ void config_CLK(CLK_config_struct* CLK_config){
   /*10 --> XIN Cap = XOUT Cap = 10pf */
   /*14 --> XIN Cap = XOUT Cap = 14pf */
   /*18 --> XIN Cap = XOUT Cap = 18pf */
-  CLK_config->LFXT1_int_cap = 18;
+  CLK_config->LFXT1_int_cap = 0;
   // DCO
   // Rango de frecuencia de trabajo del DCO:
   /*2 --> fDCOCLK =   1.4-12MHz*/
@@ -589,7 +589,113 @@ if(esp32_connected){
             timer_flag_stim_rest++;
             timer_flag_on_off++;
 
-            update_stim_parameters(); 
+            // update_stim_parameters(); 
+            if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
+              // ON_pin();
+              switch (state_stimulation) {
+                case STIM:
+                  if(timer_flag_stim_rest >= stim_rest_time){
+                    state_stimulation = REST;
+                    timer_flag_stim_rest = 0;
+                    stim_rest_time = INTAN_config.resting_time;
+                    number_of_stimulations_done++;
+                    INTAN_programmed = false;
+
+                    break;
+                  }
+                    switch (state_stimulation_ON_OFF) {
+                      case ON_P:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = OFF_P;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_off_time;
+                          INTAN_programmed = false;
+                          break;
+                        }          
+                        if(!INTAN_programmed){
+                          INTAN_config.stimulation_on[0] = 1;
+                          INTAN_config.stimulation_pol[0] = 'P';
+                          ON_INTAN_FASTER(&INTAN_config);
+                          // ON_INTAN_FASTER(&INTAN_config);
+                          INTAN_programmed = true;
+                        }
+                        
+                        break;
+
+                      case OFF_P:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = ON_N;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_on_time;
+                          INTAN_programmed = false;
+                          break;
+                        }          
+                        if(!INTAN_programmed){
+                          OFF_INTAN_FASTER(&INTAN_config);                          
+                          // OFF_INTAN_FASTER(&INTAN_config);                          
+                          INTAN_programmed = true;
+                        }
+                        
+                        
+                        break;
+
+                      case ON_N:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = OFF_N;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_off_time;
+                          INTAN_programmed = false;
+                          break;
+                        }
+                        if(!INTAN_programmed){
+                          INTAN_config.stimulation_on[0] = 1;
+                          INTAN_config.stimulation_pol[0] = 'N';
+                          ON_INTAN_FASTER(&INTAN_config);
+                          // ON_INTAN(&INTAN_config);
+                          INTAN_programmed = true;
+                        }
+
+                        
+                        break;
+
+                      case  OFF_N:
+                        if(timer_flag_on_off >= stim_on_off_time){
+                          state_stimulation_ON_OFF = ON_P;
+                          timer_flag_on_off = 0;
+                          stim_on_off_time = INTAN_config.stimulation_on_time;
+                          INTAN_programmed = false;
+                          break;
+                        }
+                        if(!INTAN_programmed){
+                          OFF_INTAN_FASTER(&INTAN_config);
+                          // OFF_INTAN_FASTER(&INTAN_config);
+                          INTAN_programmed = true;
+                        }
+                        break;
+
+                    }
+                  break;
+
+                case REST:
+                    if(timer_flag_stim_rest >= stim_rest_time){
+                      state_stimulation = STIM;
+                      timer_flag_stim_rest = 0;
+                      stim_rest_time = INTAN_config.stimulation_time;
+                      state_stimulation_ON_OFF = ON_P;
+                      INTAN_programmed = false;
+                      break;
+                    }
+                    if(!INTAN_programmed){
+                      OFF_INTAN_FASTER(&INTAN_config);
+                      INTAN_programmed = true;
+                    }
+                  break;
+              
+              }
+            }else{
+              next_stim = button_pressed();
+              OFF_pin();
+            }
           }
         }
         break;
@@ -638,10 +744,10 @@ if(esp32_connected){
         stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
         step_DAC = ((uint16_t)high_byte_step_DAC << 8) | low_byte_step_DAC;
 
-        INTAN_config.resting_time = resting_time_seconds*60*INTAN_config.MASTER_FREQ /divider_value;
-        INTAN_config.stimulation_time = stimulation_time_seconds*INTAN_config.MASTER_FREQ/divider_value/6;
-        INTAN_config.stimulation_on_time = stimulation_on_time_micro*(INTAN_config.MASTER_FREQ/divider_value)/1000000*0.4;
-        INTAN_config.stimulation_off_time = stimulation_off_time_milis*INTAN_config.MASTER_FREQ/(1000*divider_value)*1.85;
+        INTAN_config.resting_time = resting_time_seconds*60*INTAN_config.MASTER_FREQ/divider_value*2;
+        INTAN_config.stimulation_time = stimulation_time_seconds*INTAN_config.MASTER_FREQ/divider_value*2;
+        INTAN_config.stimulation_on_time = stimulation_on_time_micro*(INTAN_config.MASTER_FREQ/divider_value)/1000000;
+        INTAN_config.stimulation_off_time = stimulation_off_time_milis*INTAN_config.MASTER_FREQ/(1000*divider_value);
 
         INTAN_config.step_DAC = step_DAC; 
 

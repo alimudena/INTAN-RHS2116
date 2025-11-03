@@ -191,7 +191,7 @@ void send_SPI_commands_faster(INTAN_config_struct* INTAN_config){
     Si no se hace esto entonces habría que implementar una lógica adicional de traslado de paquetes hacia el inicio de los que se han recibido y 
     comprobarlo más adelante, aciendo que el fallo venga más tarde de lo deseado y pudiendo producir un error indeseado como una configuración mala.
     */
-    send_confirmation_values(INTAN_config);
+    // send_confirmation_values(INTAN_config);
     uint16_t pckt_count = 0;
     while(pckt_count != INTAN_config->max_size){       
             // wait_1_second();
@@ -887,7 +887,6 @@ void stimulation_polarity(INTAN_config_struct* INTAN_config){
 
 
 void stimulation_polarity_faster(INTAN_config_struct* INTAN_config){
-    uint8_t i;
     uint16_t stim_on = 0;
     if(INTAN_config->stimulation_pol[0] == 'P'){
         stim_on = stim_on | (1<<(0));
@@ -979,7 +978,16 @@ void ON_INTAN(INTAN_config_struct* INTAN_config){
 
 
 void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config){
-    
+
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    stimulation_polarity_faster(INTAN_config); 
+    send_SPI_commands_faster(INTAN_config);
+    //To make sure the polarity is well written
+    stimulation_polarity_faster(INTAN_config); 
+    send_SPI_commands_faster(INTAN_config);
+
     /*
             COMPLIANCE MONITOR
     */
@@ -987,6 +995,181 @@ void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config){
     clean_compliance_monitor(INTAN_config);
     send_SPI_commands_faster(INTAN_config);
     disable_U_flag(INTAN_config);
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    stimulation_polarity_faster(INTAN_config); 
+    send_SPI_commands_faster(INTAN_config);
+    //To make sure the polarity is well written
+    stimulation_polarity_faster(INTAN_config); 
+    send_SPI_commands_faster(INTAN_config);
+
+    // stimulators on
+    stimulation_on(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands_faster(INTAN_config);
+    //To make sure the stimulation is on
+    stimulation_on(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands_faster(INTAN_config);
+
+    /*
+            CONSTANT CURRENT STIMULATOR
+    */
+    stimulation_enable(INTAN_config);
+    send_SPI_commands_faster(INTAN_config);
+    //To make sure the stimulation is enabled
+    stimulation_enable(INTAN_config);
+    send_SPI_commands_faster(INTAN_config);
+
+    /*
+            U AND M FLAGS
+    */
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands_faster(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+
+
+    //To make sure the flags are settled up
+    enable_U_flag(INTAN_config);
+    enable_M_flag(INTAN_config);
+    read_command(INTAN_config, 255, 'E');
+    send_SPI_commands_faster(INTAN_config);
+    disable_U_flag(INTAN_config);
+    disable_M_flag(INTAN_config);
+}
+
+
+void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config){
+
+    /*
+            CONSTANT CURRENT STIMULATOR 
+    */
+    // stimulation_polarity_faster(INTAN_config); 
+
+        uint16_t stim_on = 0;
+        if(INTAN_config->stimulation_pol[0] == 'P'){
+            stim_on = stim_on | (1<<(0));
+        }else if (INTAN_config->stimulation_pol[0] == 'N') {
+        
+        }else{
+            perror("Not correct polarity selected");
+            while(1);
+        }
+        write_command(INTAN_config, STIM_POLARITY, stim_on);
+        INTAN_config->waiting_trigger = true;
+
+    // send_SPI_commands_faster(INTAN_config);
+        uint16_t pckt_count = 0;
+        while(pckt_count != INTAN_config->max_size){       
+                // wait_1_second();
+                
+                OFF_CS_INTAN_pin();
+                // __delay_cycles(CLK_5_CYCLES);
+
+                send_values(INTAN_config, pckt_count);
+                
+                // __delay_cycles(CLK_5_CYCLES);
+                ON_CS_INTAN_pin();   
+                
+                // __delay_cycles(CLK_10_CYCLES);
+
+                if(INTAN_config->time_restriction[pckt_count]){
+                    wait_1_second();
+                }
+                pckt_count += 1;
+            
+        }
+        pckt_count = 0;
+        
+        INTAN_config->max_size = 0;
+
+    //To make sure the polarity is well written
+   // stimulation_polarity_faster(INTAN_config); 
+
+        stim_on = 0;
+        if(INTAN_config->stimulation_pol[0] == 'P'){
+            stim_on = stim_on | (1<<(0));
+        }else if (INTAN_config->stimulation_pol[0] == 'N') {
+        
+        }else{
+            perror("Not correct polarity selected");
+            while(1);
+        }
+        write_command(INTAN_config, STIM_POLARITY, stim_on);
+        INTAN_config->waiting_trigger = true;
+
+    // send_SPI_commands_faster(INTAN_config);
+        pckt_count = 0;
+        while(pckt_count != INTAN_config->max_size){       
+                // wait_1_second();
+                
+                OFF_CS_INTAN_pin();
+                // __delay_cycles(CLK_5_CYCLES);
+
+                send_values(INTAN_config, pckt_count);
+                
+                // __delay_cycles(CLK_5_CYCLES);
+                ON_CS_INTAN_pin();   
+                
+                // __delay_cycles(CLK_10_CYCLES);
+
+                if(INTAN_config->time_restriction[pckt_count]){
+                    wait_1_second();
+                }
+                pckt_count += 1;
+            
+        }
+        pckt_count = 0;
+        
+        INTAN_config->max_size = 0;
+
+
+
+
+
+        
+
+    /*
+            COMPLIANCE MONITOR
+    */
+    // enable_U_flag(INTAN_config);
+        INTAN_config->U_flag = 1;
+    // clean_compliance_monitor(INTAN_config);
+        // enable_M_flag(INTAN_config);
+            INTAN_config->M_flag = 1; 
+        read_command(INTAN_config, REGISTER_VALUE_TEST, 't');
+        // disable_M_flag(INTAN_config);   
+            INTAN_config->M_flag = 0;
+    // send_SPI_commands_faster(INTAN_config);
+        pckt_count = 0;
+        while(pckt_count != INTAN_config->max_size){       
+                // wait_1_second();
+                
+                OFF_CS_INTAN_pin();
+                // __delay_cycles(CLK_5_CYCLES);
+
+                send_values(INTAN_config, pckt_count);
+                
+                // __delay_cycles(CLK_5_CYCLES);
+                ON_CS_INTAN_pin();   
+                
+                // __delay_cycles(CLK_10_CYCLES);
+
+                if(INTAN_config->time_restriction[pckt_count]){
+                    wait_1_second();
+                }
+                pckt_count += 1;
+            
+        }
+        pckt_count = 0;
+        
+        INTAN_config->max_size = 0;
+    // disable_U_flag(INTAN_config);
+        INTAN_config->U_flag = 0;
     /*
             CONSTANT CURRENT STIMULATOR 
     */

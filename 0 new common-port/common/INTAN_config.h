@@ -181,6 +181,7 @@ void stimulation_enable(INTAN_config_struct* INTAN_config);
 
 void ON_INTAN(INTAN_config_struct* INTAN_config);
 void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config);
+void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config);
 void OFF_INTAN(INTAN_config_struct* INTAN_config);
 void OFF_INTAN_FASTER(INTAN_config_struct* INTAN_config);
 

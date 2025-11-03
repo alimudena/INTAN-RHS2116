@@ -260,7 +260,7 @@ void configure_INTAN(INTAN_config_struct* INTAN_config){
   INTAN_config->positive_current_magnitude[0] = 100;
   INTAN_config->positive_current_trim[0] = 0x80;
 
-  INTAN_config->MASTER_FREQ = 4200000;
+  INTAN_config->MASTER_FREQ = 4020000;
 
 
   /*
