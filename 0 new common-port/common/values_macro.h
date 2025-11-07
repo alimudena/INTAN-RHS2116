@@ -143,31 +143,31 @@
 #define      RL_SEL2_0_25H        0x36
 #define      RL_SEL2_0_1H         0x3C
 
-#define      RL_SEL3_1k         0x00
+#define      RL_SEL3_1k           0x00
 #define      RL_SEL3_500H         0x00
 #define      RL_SEL3_300H         0x00
 #define      RL_SEL3_250H         0x00
 #define      RL_SEL3_200H         0x00
 #define      RL_SEL3_150H         0x00
 #define      RL_SEL3_100H         0x00
-#define      RL_SEL3_75H         0x00
-#define      RL_SEL3_50H         0x00
-#define      RL_SEL3_30H         0x00
-#define      RL_SEL3_25H         0x00
-#define      RL_SEL3_20H         0x00
-#define      RL_SEL3_15H         0x00
-#define      RL_SEL3_10H         0x00
+#define      RL_SEL3_75H          0x00
+#define      RL_SEL3_50H          0x00
+#define      RL_SEL3_30H          0x00
+#define      RL_SEL3_25H          0x00
+#define      RL_SEL3_20H          0x00
+#define      RL_SEL3_15H          0x00
+#define      RL_SEL3_10H          0x00
 #define      RL_SEL3_7_5H         0x00
-#define      RL_SEL3_5H         0x00
-#define      RL_SEL3_3H         0x00
+#define      RL_SEL3_5H           0x00
+#define      RL_SEL3_3H           0x00
 #define      RL_SEL3_2_5H         0x00
-#define      RL_SEL3_2H         0x00
+#define      RL_SEL3_2H           0x00
 #define      RL_SEL3_1_5H         0x00
-#define      RL_SEL3_1H         0x00
-#define      RL_SEL3_0_75H         0x00
+#define      RL_SEL3_1H           0x00
+#define      RL_SEL3_0_75H        0x00
 #define      RL_SEL3_0_5H         0x00
 #define      RL_SEL3_0_3H         0x00
-#define      RL_SEL3_0_25H         0x00
+#define      RL_SEL3_0_25H        0x00
 #define      RL_SEL3_0_1H         0x01
 
 

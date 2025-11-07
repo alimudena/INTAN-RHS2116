@@ -103,7 +103,7 @@ typedef struct{
 
     // register 2
     uint8_t zcheck_select;
-    bool zcheck_DAC_enhable;
+    bool zcheck_DAC_power;
     bool zcheck_load;
     bool zcheck_scale;
     bool zcheck_en;

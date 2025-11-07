@@ -99,7 +99,7 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
     
     
     INTAN_config->zcheck_select = 0;
-    INTAN_config->zcheck_DAC_enhable = 0;
+    INTAN_config->zcheck_DAC_power = 0;
     INTAN_config->zcheck_load = 0;
     INTAN_config->zcheck_scale = 0;
     INTAN_config->zcheck_en = 0;
@@ -154,17 +154,18 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
             // wait_1_second();
             
             OFF_CS_INTAN_pin();
-            // __delay_cycles(CLK_5_CYCLES);
+            __delay_cycles(CLK_5_CYCLES);
 
             send_values(INTAN_config, pckt_count);
             
-            // __delay_cycles(CLK_5_CYCLES);
+            __delay_cycles(CLK_5_CYCLES);
             ON_CS_INTAN_pin();   
             
-            // __delay_cycles(CLK_10_CYCLES);
+            __delay_cycles(CLK_10_CYCLES);
 
             if(INTAN_config->time_restriction[pckt_count]){
                 wait_1_second();
+                INTAN_config->time_restriction[pckt_count] = 0;
             }
             pckt_count += 1;
         
@@ -1382,7 +1383,7 @@ void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config){
 // Impedance check control register 2 configuration
 void impedance_check_control(INTAN_config_struct* INTAN_config){
     uint8_t zcheck_select = INTAN_config->zcheck_select;
-    bool zcheck_DAC_enhable = INTAN_config->zcheck_DAC_enhable;
+    bool zcheck_DAC_power = INTAN_config->zcheck_DAC_power;
     bool zcheck_load = INTAN_config->zcheck_load;
     uint8_t zcheck_scale = INTAN_config->zcheck_scale;
     bool zcheck_en = INTAN_config->zcheck_en;
@@ -1392,7 +1393,7 @@ void impedance_check_control(INTAN_config_struct* INTAN_config){
         while(1);
     }
     
-    uint16_t reg_value = (((uint16_t)zcheck_select << 8) | ((uint16_t)zcheck_DAC_enhable << 6) | ((uint16_t)zcheck_load << 5) | ((uint16_t)zcheck_scale << 3) | ((uint16_t)zcheck_en));
+    uint16_t reg_value = (((uint16_t)zcheck_select << 8) | ((uint16_t)zcheck_DAC_power << 6) | ((uint16_t)zcheck_load << 5) | ((uint16_t)zcheck_scale << 3) | ((uint16_t)zcheck_en));
     write_command(INTAN_config, IMPEDANCE_CHECK_CONTROL, reg_value);
 }
 
@@ -1473,18 +1474,18 @@ void disable_absolute_value(INTAN_config_struct* INTAN_config){
 
 // Enable or disable the digital signal processing HPF
 void disable_digital_signal_processing_HPF(INTAN_config_struct* INTAN_config){
-    INTAN_config->DSPen = true;
+    INTAN_config->DSPen = false;
     write_register_1(INTAN_config);
 }
 void enable_digital_signal_processing_HPF(INTAN_config_struct* INTAN_config){
-    INTAN_config->DSPen = false;
+    INTAN_config->DSPen = true;
     write_register_1(INTAN_config);
 }
 
 // Digital signal processing filter HPF cutoff frequency configuration
 void DSP_cutoff_frequency_configuration(INTAN_config_struct* INTAN_config){
     float_t f_sampling;
-    f_sampling = INTAN_config->ADC_sampling_rate/INTAN_config->number_channels_to_convert; 
+    f_sampling = INTAN_config->ADC_sampling_rate*1000/INTAN_config->number_channels_to_convert; 
     float_t K;
     K = INTAN_config->DSP_cutoff_freq/f_sampling;
     if (K>=0.1103){
