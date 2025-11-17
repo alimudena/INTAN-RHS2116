@@ -1,0 +1,112 @@
+%% === CONFIGURACIÓN ===
+%rutas = ["M11_AC_10mVpp_30kHz_2.csv"];
+
+%% === CREAR LISTA DE ARCHIVOS AUTOMÁTICAMENTE ===
+carpeta = 'Medidas';  % 🔹 Cambia esto por la ruta donde están tus archivos
+ext = '*.csv';                      % 🔹 Extensión que quieres incluir (puedes cambiar a '*.txt', etc.)
+
+archivos = dir(fullfile(carpeta, ext));
+rutas = string({archivos.name});    % convierte los nombres de archivo a string
+
+% Si quieres incluir la ruta completa:
+% rutas = string(fullfile(carpeta, {archivos.name}));
+
+% disp('Archivos detectados:');
+% disp(rutas);
+
+big_endian = true;   % true = [byte alto, byte bajo]; false = little endian
+
+rutas = ["M015_AC_4mVpp_450Hz.csv"];
+%% === BUCLE PRINCIPAL ===
+for idx = 1:length(rutas)
+    ruta_csv = "Medidas/"+rutas(idx);
+    fprintf("Procesando archivo: %s\n", ruta_csv);
+
+    % === EXTRAER Hz y Tensión DEL NOMBRE DEL ARCHIVO ===
+    tokens = regexp(ruta_csv, '_(\d+mVpp)_(\d+k?Hz)', 'tokens');
+    if isempty(tokens)
+        warning('No se pudieron extraer Hz/V del nombre: %s', ruta_csv);
+        continue
+    end
+    tension = tokens{1}{1}; % Ej: "10mVpp"
+    frecuencia = tokens{1}{2}; % Ej: "80Hz" o "1kHz"
+
+    % Limpieza para usar en nombres de variables (sin kHz, mVpp)
+    freq_tag = erase(frecuencia, 'Hz');
+    volt_tag = erase(tension, 'Vpp');
+    freq_tag = strrep(freq_tag, 'k', 'k'); % mantener k como texto
+    volt_tag = strrep(volt_tag, 'm', 'm'); % mantener m como texto
+
+    % === LECTURA ROBUSTA DEL CSV ===
+    opts = detectImportOptions(ruta_csv, 'Delimiter', ';', 'DecimalSeparator', ',');
+    T = readtable(ruta_csv, opts);
+
+    % Asegurar columna de tiempo
+    if ~any(strcmp('Time', T.Properties.VariableNames))
+        T.Time = (1:height(T))';
+    end
+
+    % Eliminar columna no deseada
+    if any(strcmp('SPI_1_2_3_4_', T.Properties.VariableNames))
+        T = removevars(T, {'SPI_1_2_3_4_'});
+    elseif any(strcmp('SPI (1,2,3,4)', T.Properties.VariableNames))
+        T = removevars(T, {'SPI (1,2,3,4)'});
+    end
+
+    % Nombres válidos
+    T.Properties.VariableNames = matlab.lang.makeValidName(T.Properties.VariableNames);
+
+    % === PROCESAMIENTO DE DATOS ===
+    muestras_tiempo = [];
+    muestras_valor = [];
+
+    for i = 1:height(T)-2
+        spi_str = string(T.Var2(i));
+        spi_str = erase(spi_str, ["(", ")"]);
+        canal = str2double(spi_str);
+
+        if canal ~= 49
+            continue
+        end
+
+        byte_alto = str2double(erase(string(T.Var2(i+1)), ["(", ")"]));
+        byte_bajo = str2double(erase(string(T.Var2(i+2)), ["(", ")"]));
+
+        if any(isnan([canal, byte_alto, byte_bajo]))
+            continue
+        end
+
+        % Combinar bytes
+        if big_endian
+            valor = bitor(bitshift(byte_alto, 8), byte_bajo);
+        else
+            valor = bitor(bitshift(byte_bajo, 8), byte_alto);
+        end
+
+        tiempo = T.Var1(i);
+
+%         muestras_tiempo(end+1,1) = tiempo; %#ok<SAGROW>
+        muestras_valor(end+1,1) = 0.195*(valor-32768)/1000000;  %#ok<SAGROW>
+    end
+
+    % === CREAR VARIABLES DINÁMICAS ===
+    nombre_base = erase(rutas(idx), ".csv"); % quitar extensión si la tiene
+
+%     nombre_tiempo = sprintf('%s_muestras_tiempo', nombre_base);
+    nombre_valor  = sprintf('%s_muestras_valor', nombre_base);
+
+%     assignin('base', nombre_tiempo, muestras_tiempo);
+    assignin('base', nombre_valor, muestras_valor);
+
+%     fprintf('✅ Generadas variables: %s y %s\n', nombre_tiempo, nombre_valor);
+  fprintf('✅ Generada variable: %s\n', nombre_valor);
+
+end
+
+disp('🎯 Todos los archivos procesados correctamente.');
+%%
+figure
+plot(M016_AC_4mVpp_450Hz_muestras_valor)
+hold on
+plot(M015_AC_4mVpp_450Hz_muestras_valor)
+

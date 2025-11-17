@@ -282,6 +282,7 @@ void disable_D_flag(INTAN_config_struct* INTAN_config);
 // Functions for sampling one channel or N channels
 void convert_channel(INTAN_config_struct* INTAN_config, uint8_t Channel);
 void convert_N_channels(INTAN_config_struct* INTAN_config);
+void convert_N_channels_faster(INTAN_config_struct* INTAN_config);
 
 // Function for clearing command - setting ADC calibration
 void clear_command(INTAN_config_struct* INTAN_config);

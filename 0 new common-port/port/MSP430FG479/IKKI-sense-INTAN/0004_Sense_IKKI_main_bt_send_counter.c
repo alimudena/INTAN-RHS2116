@@ -112,6 +112,7 @@ uint8_t high_byte_step_DAC = 0;
 uint8_t low_byte_step_DAC = 0;
 uint16_t step_DAC = 0;
 
+uint32_t counter;
 
 uint32_t divider_value = 0x029A;
 
@@ -130,7 +131,7 @@ SPI_config_struct SPI_config;
 SPI_B_config_struct SPI_B_config;
 
 
-uint8_t channel = 1;
+uint8_t channel = 3;
 
 
 //************************** other parameters ************************** 
@@ -227,20 +228,21 @@ void configure_INTAN(INTAN_config_struct* INTAN_config){
   /* 
     STIMULATION DISABLE AND MINIMUM POWER DISIPATION
   */
-  INTAN_config->ADC_sampling_rate = 14;
+  INTAN_config->ADC_sampling_rate = 13;
   /*
     DSP FOR HIGH PASS FILTER REMOVAL
   */
   INTAN_config->DSP_cutoff_freq = 4.665;
-  INTAN_config->number_channels_to_convert = 8;
+  INTAN_config->number_channels_to_convert = 1;
 
   /*
     ELECTRODE IMPEDANCE TEST
   */
   INTAN_config->zcheck_select = 0;
-  INTAN_config->zcheck_load = 1;
+  INTAN_config->zcheck_load = 0;
   INTAN_config->zcheck_scale = 0;
   INTAN_config->zcheck_en = 0;
+  INTAN_config->zcheck_DAC_power = 1;
   INTAN_config->zcheck_DAC_value = 128;
 
   /*
@@ -251,8 +253,8 @@ void configure_INTAN(INTAN_config_struct* INTAN_config){
     
   INTAN_config->fh_magnitude = 7.5;
   INTAN_config->fh_unit = 'k';
-  INTAN_config->fc_low_A = 10;
-  INTAN_config->fc_low_B = 10;
+  INTAN_config->fc_low_A = 5;
+  INTAN_config->fc_low_B = 1000.0;
 
   INTAN_config->amplifier_cutoff_frequency_A_B[channel] = 'A';
 
@@ -412,18 +414,17 @@ int main(void)
   //************************** INTAN setup ************************** 
 
   stim_en_OFF();
-  // initialize_INTAN(&INTAN_config);
-  // configure_INTAN(&INTAN_config);
+  initialize_INTAN(&INTAN_config);
+  configure_INTAN(&INTAN_config);
   // call_configuration_functions(&INTAN_config);
   // call_sense_configuration_functions(&INTAN_config, channel);
-  call_initialization_procedure_example(&INTAN_config);
+  // call_initialization_procedure_example(&INTAN_config);
+  call_initialization_procedure_example_test_INTAN_functions(&INTAN_config);
 
 
 
 uint8_t received_channel_value_1;
-uint8_t received_channel_value_3_inv;
 uint8_t received_channel_value_2;
-uint8_t received_channel_value_4_inv;
 uint8_t received_channel_value_3;
 uint8_t received_channel_value_4;
 enable_D_flag(&INTAN_config);
@@ -444,19 +445,39 @@ enable_D_flag(&INTAN_config);
       */
 
       // // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
+      // OFF_CS_ESP_PARAM_pin();
+      // while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      // __delay_cycles(CLK_10_CYCLES);
+      // UCA0TXBUF = 0x31;
+      // while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      // __delay_cycles(CLK_10_CYCLES);
+      // UCA0TXBUF = received_channel_value_1;
+      // while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      // __delay_cycles(CLK_10_CYCLES);
+      // UCA0TXBUF = received_channel_value_2;
+      // __delay_cycles(CLK_10_CYCLES);
+      // ON_CS_ESP_PARAM_pin();
+
+
+      // // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
+      // received_channel_value_1 = (counter >> 24) & 0xFF;
+      // received_channel_value_2 = (counter >> 16) & 0xFF;
+      received_channel_value_3 = (counter >> 8)  & 0xFF;
+      received_channel_value_4 = counter & 0xFF;
       OFF_CS_ESP_PARAM_pin();
       while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
       __delay_cycles(CLK_10_CYCLES);
       UCA0TXBUF = 0x31;
       while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
       __delay_cycles(CLK_10_CYCLES);
-      UCA0TXBUF = received_channel_value_1;
+      UCA0TXBUF = received_channel_value_3;
       while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
       __delay_cycles(CLK_10_CYCLES);
-      UCA0TXBUF = received_channel_value_2;
+      UCA0TXBUF = received_channel_value_4;
+      counter = counter++;
       __delay_cycles(CLK_10_CYCLES);
       ON_CS_ESP_PARAM_pin();
-    
+
     /*
       SEND DATA TO INTAN BECAUSE OF STATE CHANGE caused by a timer            
     */

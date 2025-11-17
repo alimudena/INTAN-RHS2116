@@ -303,7 +303,10 @@ void convert_N_channels(INTAN_config_struct* INTAN_config){
     uint8_t i;
     INTAN_config->max_size = reg_config_num;
     uint8_t number_channels;
+    uint8_t initial_channel;
     number_channels = INTAN_config->number_channels_to_convert;
+    initial_channel = INTAN_config->initial_channel_to_convert;
+    
     
     // Convert the first channel and then convert the N following channels
     Channel = INTAN_config->initial_channel_to_convert;
@@ -349,48 +352,36 @@ void convert_N_channels(INTAN_config_struct* INTAN_config){
 
 
     reg_config_num += 1;
-
-    for (i = number_channels; i>0; i--){
-        // No flags
-        INTAN_config->array1[reg_config_num] = CONVERT_ACTION;
-        
-        // U flag
-        if (INTAN_config->U_flag == true){
-            saved_value = INTAN_config->array1[reg_config_num];
-            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_U; 
-        } 
-        
-        // M flag
-        if (INTAN_config->M_flag == true){
-            saved_value = INTAN_config->array1[reg_config_num];
-            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_M; 
-        } 
-        
-        // D flag 
-        if (INTAN_config->D_flag == true){
-            saved_value = INTAN_config->array1[reg_config_num];
-            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_D; 
-        } 
-
-        // H flag
-        if (INTAN_config->H_flag == true){
-            saved_value = INTAN_config->array1[reg_config_num];
-            INTAN_config->array1[reg_config_num] = saved_value | CONVERT_ACTION_H; 
-        } 
-
-        INTAN_config->array2[reg_config_num] = CONVERT_ACTION_N;
-        INTAN_config->array3[reg_config_num] = ZEROS_8;
-        INTAN_config->array4[reg_config_num] = ZEROS_8;
-
-        INTAN_config->expected_RX_bool[reg_config_num] = 0;
-        INTAN_config->expected_RX[reg_config_num] = ZEROS_32;
-        INTAN_config->instruction[reg_config_num] = 'O';
-    
-
-
-        reg_config_num += 1;
-    }
     INTAN_config->max_size = reg_config_num;
+
+    for (i = initial_channel; i<number_channels+initial_channel; i++){
+        convert_channel(INTAN_config, i);
+    }
+    
+}
+
+
+// Convert N channels command sent to the INTAN through SPI by the MSP430FG479
+void convert_N_channels_faster(INTAN_config_struct* INTAN_config){
+    uint16_t reg_config_num = INTAN_config->max_size;
+    uint8_t Channel;
+    uint8_t i;
+    INTAN_config->max_size = reg_config_num;
+    uint8_t number_channels;
+    uint8_t initial_channel;
+    number_channels = INTAN_config->number_channels_to_convert;
+    initial_channel = INTAN_config->initial_channel_to_convert;
+    
+    // Convert the first channel and then convert the N following channels
+    Channel = INTAN_config->initial_channel_to_convert;
+    if (Channel >= 16){
+        perror("Error: Too high Channel value.");
+        while(1);
+    }
+    for (i = initial_channel; i<number_channels+initial_channel; i++){
+        convert_channel(INTAN_config, i);
+    }
+    
 }
 
 
