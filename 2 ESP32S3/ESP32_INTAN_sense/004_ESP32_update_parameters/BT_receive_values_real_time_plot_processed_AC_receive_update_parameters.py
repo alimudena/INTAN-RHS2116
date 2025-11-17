@@ -113,19 +113,17 @@ def run_async_task(coro):
 def connect_ble(log_text):
     run_async_task(connect_ble_async(log_text))
 
-def send_data(entries_a, entries_b, log_text):
-    # Combina todos los valores de los parámetros A y B
-    values_a = [entry.get().strip() for entry in entries_a]
-    values_b = [entry.get().strip() for entry in entries_b]
 
-    all_values = values_a + values_b
+def send_data(entries, log_text):
+    values = []
+    for entry in entries:
+        val = entry.get().strip()
+        if not val:
+            messagebox.showwarning("Empty values", "Please fill all fields.")
+            return
+        values.append(val)
 
-    # Verifica que no haya campos vacíos
-    if not all(all_values):
-        messagebox.showwarning("Empty values", "Please, fill in values before sending.")
-        return
-
-    data = ",".join(all_values)
+    data = ",".join(values)
     run_async_task(send_data_async(data, log_text))
 
 # ------------------ Gráfica ------------------
@@ -317,7 +315,7 @@ def run_gui():
 
     # ---- Botones inferiores ----
     ttk.Button(root, text="📤 Send new data",
-               command=lambda: send_data(entries_a, [], log_text)).pack(pady=7)
+               command=lambda: send_data(entries_a, log_text)).pack(pady=7)
 
     ttk.Button(root, text="📊 Show complete graph",
                command=show_graph).pack(pady=5)
