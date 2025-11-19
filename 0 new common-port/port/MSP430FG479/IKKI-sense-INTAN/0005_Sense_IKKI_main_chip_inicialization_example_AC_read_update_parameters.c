@@ -697,7 +697,7 @@ enable_D_flag(&INTAN_config);
 
       case TX_PARAMS_INTAN:{
         general_state = ENVIO_INTAN;
-        call_initialization_procedure_example_test_INTAN_functions(&INTAN_config);
+        INTAN_function_update(&INTAN_config);
         OFF_ACK_param();
         break;  
 

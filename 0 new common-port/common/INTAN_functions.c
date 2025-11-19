@@ -352,3 +352,102 @@ void call_initialization_procedure_example_test_INTAN_functions(INTAN_config_str
         send_SPI_commands(INTAN_config);
 
 }
+
+
+
+void INTAN_function_update(INTAN_config_struct* INTAN_config){
+
+        read_command(INTAN_config, 255, '1');
+        minimum_power_disipation(INTAN_config);
+        stimulation_disable(INTAN_config);
+        clear_command(INTAN_config);
+        send_SPI_commands(INTAN_config);
+
+        ADC_sampling_rate_config(INTAN_config);
+        if (INTAN_config->C2_enabled){
+                enable_C2(INTAN_config);
+        }else{
+                disable_C2(INTAN_config);
+        }
+
+        if (INTAN_config->abs_mode){
+                enable_absolute_value(INTAN_config);
+        }else{
+                disable_absolute_value(INTAN_config);
+        }
+
+        if (INTAN_config->DSPen){
+                enable_digital_signal_processing_HPF(INTAN_config);
+                DSP_cutoff_frequency_configuration(INTAN_config);
+        }else{
+                disable_digital_signal_processing_HPF(INTAN_config);
+        }
+
+
+        disable_digital_output_1(INTAN_config);
+        disable_digital_output_2(INTAN_config);
+        power_OFF_output_1(INTAN_config);
+        power_OFF_output_2(INTAN_config);
+
+        impedance_check_control(INTAN_config);
+        impedance_check_DAC(INTAN_config);
+
+        
+        fc_high(INTAN_config);
+
+        fc_low_A(INTAN_config);
+        fc_low_B(INTAN_config);
+
+        power_up_AC(INTAN_config);
+        send_SPI_commands(INTAN_config);
+
+        enable_U_flag(INTAN_config);
+        amp_fast_settle_reset(INTAN_config);
+        disable_U_flag(INTAN_config);
+
+        enable_U_flag(INTAN_config);
+        A_or_B_cutoff_frequency(INTAN_config);
+        disable_U_flag(INTAN_config);
+
+        send_SPI_commands(INTAN_config);
+
+        stim_step_DAC_configuration(INTAN_config);
+        stim_PNBIAS_configuration(INTAN_config);
+        charge_recovery_voltage_configuration(INTAN_config);
+        charge_recovery_current_configuration(INTAN_config);
+        send_SPI_commands(INTAN_config);
+
+        enable_U_flag(INTAN_config);
+        all_stim_channels_off(INTAN_config);
+        stimulation_on(INTAN_config);
+        disable_U_flag(INTAN_config);
+        enable_U_flag(INTAN_config);
+        stimulation_polarity(INTAN_config);
+        disable_U_flag(INTAN_config);
+        enable_U_flag(INTAN_config);
+        disconnect_channels_from_gnd(INTAN_config);
+        disable_U_flag(INTAN_config);
+        enable_U_flag(INTAN_config);
+        disable_charge_recovery_sw(INTAN_config);
+        disable_U_flag(INTAN_config);
+
+        send_SPI_commands(INTAN_config);
+
+        enable_U_flag(INTAN_config);
+        int i;
+        for (i = NUM_CHANNELS-1; i>=0; i--){
+                stim_current_channel_configuration(INTAN_config, i, INTAN_config->negative_current_trim[i],INTAN_config->negative_current_magnitude[i], INTAN_config->positive_current_trim[i], INTAN_config->positive_current_magnitude[i]);
+        }
+        disable_U_flag(INTAN_config);
+
+        send_SPI_commands(INTAN_config);
+        enable_M_flag(INTAN_config);
+        enable_U_flag(INTAN_config);
+        clean_compliance_monitor(INTAN_config);
+        send_SPI_commands(INTAN_config);
+        disable_U_flag(INTAN_config);
+        disable_M_flag(INTAN_config);
+        send_SPI_commands(INTAN_config);
+
+}
+

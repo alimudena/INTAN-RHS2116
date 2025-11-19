@@ -45,9 +45,6 @@ typedef struct{
     uint32_t stimulation_on_time;
     uint32_t stimulation_off_time;
 
-
-
-
     uint16_t step_sel;
     uint16_t CL_sel;
     uint8_t array1[MAX_VALUES];
