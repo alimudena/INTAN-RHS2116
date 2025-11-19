@@ -510,7 +510,6 @@ int main(void)
     OFF_ACK_param();
     new_param_setup();
     
-
     //************************** SD16 configuration *****************************
     config_SD16A(&SD16A_configuration);
     setup_SD16A(&SD16A_configuration);

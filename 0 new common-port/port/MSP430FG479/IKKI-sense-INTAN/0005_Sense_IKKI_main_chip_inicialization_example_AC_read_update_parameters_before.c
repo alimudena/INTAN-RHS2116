@@ -100,35 +100,17 @@ uint32_t timer_flag_stim_rest = 0;
 bool INTAN_programmed = false;
 uint8_t number_of_stimulations_done = 10;
 
-uint8_t high_ADC_sampling_rate;
-uint8_t low_ADC_sampling_rate;
-uint8_t high_ADC_sampling_rate_2;
-uint8_t low_ADC_sampling_rate_2;
-uint8_t high_ADC_sampling_rate_3;
-uint8_t high_high_byte_DSP_cutoff_frequency;
-uint8_t high_byte_DSP_cutoff_frequency;
-uint8_t low_byte_DSP_cutoff_frequency;
-uint8_t low_low_byte_DSP_cutoff_frequency;
-uint8_t high_high_byte_fc_high_magnitude;
-uint8_t high_byte_fc_high_magnitude;
-uint8_t low_byte_fc_high_magnitude;
-uint8_t low_low_byte_fc_high_magnitude;
-uint8_t high_high_byte_fc_low_A;
-uint8_t high_byte_fc_low_A;
-uint8_t low_byte_fc_low_A;
-uint8_t low_low_byte_fc_low_A;
-uint8_t high_high_byte_fc_low_B;
-uint8_t high_byte_fc_low_B;
-uint8_t low_byte_fc_low_B;
-uint8_t low_low_byte_fc_low_B;
-uint8_t amplifier_cutoff;
-uint8_t fc_high_unit;
-char amplifier_cutoff_frequency_A_B;
-
-typedef union {
-    float value;
-    uint8_t bytes[4];
-} float_bytes_union;
+uint8_t resting_time_seconds = 0;
+uint8_t stimulation_time_seconds = 0;
+uint8_t high_byte_stimulation_on_time_micro = 0;
+uint8_t low_byte_stimulation_on_time_micro = 0;
+uint16_t stimulation_on_time_micro = 0;
+uint8_t stimulation_off_time_milis = 0;
+uint8_t positive_current_magnitude = 0;
+uint8_t negative_current_magnitude = 0;
+uint8_t high_byte_step_DAC = 0;
+uint8_t low_byte_step_DAC = 0;
+uint16_t step_DAC = 0;
 
 
 uint32_t divider_value = 0x029A;
@@ -161,14 +143,15 @@ bool next_stim;
 
 //************************** State machines ************************** 
 
-typedef enum {ENVIO_INTAN, RX_PARAMS_ESP32, TX_PARAMS_INTAN, NEW_PARAM_OFF_WAIT} Estados;
-Estados general_state = ENVIO_INTAN;
+typedef enum {ENVIO_ECG, RX_PARAMS_ESP32, TX_PARAMS_INTAN, NEW_PARAM_OFF_WAIT} Estados;
+Estados general_state = ENVIO_ECG;
 
 
 typedef enum {STIM, REST} states_stimulation;
 states_stimulation state_stimulation = REST;
 
-
+typedef enum {ON_P, OFF_P, ON_N, OFF_N} states_stimulation_ON_OFF;
+states_stimulation_ON_OFF state_stimulation_ON_OFF = ON_P;
 
 void config_SPI_A0_stim(SPI_config_struct* SPI_config){
   SPI_config->Master_Slave = 'M';       //M: Master, S: Slave
@@ -439,272 +422,42 @@ int main(void)
 
 uint8_t received_channel_value_1;
 uint8_t received_channel_value_2;
-// uint8_t received_channel_value_3;
-// uint8_t received_channel_value_4;
+uint8_t received_channel_value_3;
+uint8_t received_channel_value_4;
 enable_D_flag(&INTAN_config);
 
   while(1){
 
-    switch (general_state) {
-      case ENVIO_INTAN:{ // Estado 1: muestreo del INTAN y envío a través de SPI al ESP32 de los valores obtenidos en el INTAN
+    /*
+      Send to the INTAN the convert command 
+    */
+      convert_channel(&INTAN_config, channel);
+      send_SPI_commands_faster(&INTAN_config);
+      received_channel_value_1 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
+      received_channel_value_2 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
+      // received_channel_value_3 = (INTAN_config.obtained_RX[0] >> 8)  & 0xFF;
+      // received_channel_value_4 = INTAN_config.obtained_RX[0] & 0xFF;
+      /*
+        Resend to the ESP32 the received values from INTAN 
+      */
 
-        new_param = new_param_read();
-        if(new_param){
-          general_state = RX_PARAMS_ESP32;
-          break;
-        }else{
-          /*
-            Send to the INTAN the convert command 
-          */
-            convert_channel(&INTAN_config, channel);
-            send_SPI_commands_faster(&INTAN_config);
-            received_channel_value_1 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
-            received_channel_value_2 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
-            // received_channel_value_3 = (INTAN_config.obtained_RX[0] >> 8)  & 0xFF;
-            // received_channel_value_4 = INTAN_config.obtained_RX[0] & 0xFF;
-            
-            /*
-              Resend to the ESP32 the received values from INTAN 
-            */
-            // // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
-            OFF_CS_ESP_PARAM_pin();
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            __delay_cycles(CLK_10_CYCLES);
-            UCA0TXBUF = 0x31;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            __delay_cycles(CLK_10_CYCLES);
-            UCA0TXBUF = received_channel_value_1;
-            while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
-            __delay_cycles(CLK_10_CYCLES);
-            UCA0TXBUF = received_channel_value_2;
-            __delay_cycles(CLK_10_CYCLES);
-            ON_CS_ESP_PARAM_pin();
-        }
-        break;
-      }
+      // // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
+      OFF_CS_ESP_PARAM_pin();
+      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      __delay_cycles(CLK_10_CYCLES);
+      UCA0TXBUF = 0x31;
+      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      __delay_cycles(CLK_10_CYCLES);
+      UCA0TXBUF = received_channel_value_1;
+      while (!(IFG2 & UCA0TXIFG));              // USART1 TX buffer ready?
+      __delay_cycles(CLK_10_CYCLES);
+      UCA0TXBUF = received_channel_value_2;
+      __delay_cycles(CLK_10_CYCLES);
+      ON_CS_ESP_PARAM_pin();
+    
+    /*
+      SEND DATA TO INTAN BECAUSE OF STATE CHANGE caused by a timer            
+    */
 
-      case RX_PARAMS_ESP32:{
-
-        ON_ACK_param();
-        __delay_cycles(1000);
-
-        OFF_CS_ESP_PARAM_pin();
-
-        // ----------------------------------------------------------------------
-        // ADC sampling rate (2 bytes)
-        // ----------------------------------------------------------------------
-        UCA0TXBUF = 0x10;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        uint8_t high_ADC_sampling_rate = UCA0RXBUF;
-
-        UCA0TXBUF = 0x20;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        uint8_t low_ADC_sampling_rate = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // Channels to convert (1 byte)
-        // ----------------------------------------------------------------------
-        UCA0TXBUF = 0x30;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        INTAN_config.number_channels_to_convert = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // DSP enabled (1 byte)
-        // ----------------------------------------------------------------------
-        UCA0TXBUF = 0x40;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        INTAN_config.DSPen = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // DSP cutoff frequency (float → 4 bytes)
-        // ----------------------------------------------------------------------
-        uint8_t dsp_bytes[4];
-
-        UCA0TXBUF = 0x50;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        dsp_bytes[0] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x60;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        dsp_bytes[1] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x70;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        dsp_bytes[2] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x80;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        dsp_bytes[3] = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // Initial channel (1 byte)
-        // ----------------------------------------------------------------------
-        UCA0TXBUF = 0x90;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        INTAN_config.initial_channel_to_convert = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // fc high magnitude (float → 4 bytes)
-        // ----------------------------------------------------------------------
-        uint8_t fcH_bytes[4];
-
-        UCA0TXBUF = 0xA0;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcH_bytes[0] = UCA0RXBUF;
-
-        UCA0TXBUF = 0xB0;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcH_bytes[1] = UCA0RXBUF;
-
-        UCA0TXBUF = 0xC0;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcH_bytes[2] = UCA0RXBUF;
-
-        UCA0TXBUF = 0xD0;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcH_bytes[3] = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // fc high unit (1 byte)
-        // ----------------------------------------------------------------------
-        UCA0TXBUF = 0xE0;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fc_high_unit = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // fc low A (float → 4 bytes)
-        // ----------------------------------------------------------------------
-        uint8_t fcA_bytes[4];
-
-        UCA0TXBUF = 0xF0;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcA_bytes[0] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x01;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcA_bytes[1] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x02;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcA_bytes[2] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x03;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcA_bytes[3] = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // fc low B (float → 4 bytes)
-        // ----------------------------------------------------------------------
-        uint8_t fcB_bytes[4];
-
-        UCA0TXBUF = 0x04;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcB_bytes[0] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x05;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcB_bytes[1] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x06;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcB_bytes[2] = UCA0RXBUF;
-
-        UCA0TXBUF = 0x07;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        fcB_bytes[3] = UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // Amplifier cutoff (1 byte)
-        // ----------------------------------------------------------------------
-        UCA0TXBUF = 0x08;
-        while (!(IFG2 & UCA0RXIFG));
-        __delay_cycles(30);
-        INTAN_config.amplifier_cutoff_frequency_A_B[channel] = (char)UCA0RXBUF;
-
-
-        // ----------------------------------------------------------------------
-        // CLOSE chip select
-        // ----------------------------------------------------------------------
-        ON_CS_ESP_PARAM_pin();
-
-
-        // ======================================================================
-        // RECONSTRUCT 16-bit AND FLOAT PARAMETERS
-        // ======================================================================
-
-        // ADC sampling rate
-        INTAN_config.ADC_sampling_rate =
-            ((uint16_t)high_ADC_sampling_rate << 8) | low_ADC_sampling_rate;
-
-        // DSP cutoff frequency (float)
-        memcpy(&INTAN_config.DSP_cutoff_freq, dsp_bytes, 4);
-
-        // fc high magnitude (float)
-        memcpy(&INTAN_config.fh_magnitude, fcH_bytes, 4);
-
-        // fc low A (float)
-        memcpy(&INTAN_config.fc_low_A, fcA_bytes, 4);
-
-        // fc low B (float)
-        memcpy(&INTAN_config.fc_low_B, fcB_bytes, 4);
-
-        general_state = NEW_PARAM_OFF_WAIT;
-        break;
-
-
-      }
-
-      case NEW_PARAM_OFF_WAIT:{
-        new_param = new_param_read();
-        if(!new_param){
-          general_state = TX_PARAMS_INTAN;
-          break;
-        }
-        break;
-
-      }
-
-      case TX_PARAMS_INTAN:{
-        general_state = ENVIO_INTAN;
-        call_initialization_procedure_example_test_INTAN_functions(&INTAN_config);
-        OFF_ACK_param();
-        break;  
-
-      }
-
-      default:
-        break;
-    }
   } 
 }
