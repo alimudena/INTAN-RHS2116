@@ -12,14 +12,40 @@
 
 
 
+
+/**
+ * @brief Combine two 8-bit values into a single 16-bit value.
+ *
+ * The `high` byte will be placed in the MSB and `low` in the LSB of the
+ * returned 16-bit value.
+ *
+ * @param high High 8-bit value.
+ * @param low Low 8-bit value.
+ * @return uint16_t Combined 16-bit value.
+ */
 uint16_t unify_8bits(uint8_t high, uint8_t low) {
     return ((uint16_t)high << 8) | low;
 }
 
 
+/**
+ * @brief Combine two 16-bit values into a single 32-bit value.
+ *
+ * The `high` word will be placed in the high 16 bits and `low` in the low
+ * 16 bits of the returned 32-bit value.
+ *
+ * @param high High 16-bit value.
+ * @param low Low 16-bit value.
+ * @return uint32_t Combined 32-bit value.
+ */
 uint32_t unify_16bits(uint16_t high, uint16_t low) {
     return ((uint32_t)high << 16) | low;
 }
+/**
+ * @brief Enable flag M in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 /*
     Functions for enabling and disabling the booleans described in the INTAN for MSP430
 */
@@ -27,25 +53,60 @@ uint32_t unify_16bits(uint16_t high, uint16_t low) {
 void enable_M_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->M_flag = 1;
 }
+/**
+ * @brief Enable flag U in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 void enable_U_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->U_flag = 1;
 }
+/**
+ * @brief Enable flag H in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 void enable_H_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->H_flag = 1;
 }
+/**
+ * @brief Enable flag D in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 void enable_D_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->D_flag = 1;
 }
+/**
+ * @brief Disable flag M in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 
 void disable_M_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->M_flag = 0;
 }
+/**
+ * @brief Disable flag U in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 void disable_U_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->U_flag = 0;
 }
+/**
+ * @brief Disable flag H in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 void disable_H_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->H_flag = 0;
 }
+/**
+ * @brief Disable flag D in the INTAN configuration structure.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to modify.
+ */
 void disable_D_flag(INTAN_config_struct *INTAN_config){
     INTAN_config->D_flag = 0;
 }
@@ -56,6 +117,14 @@ void disable_D_flag(INTAN_config_struct *INTAN_config){
 /*
     Function for initializing INTAN structure values
 */
+/**
+ * @brief Initialize the INTAN configuration structure with default values.
+ *
+ * Resets flags, clears buffers and sets default parameters used by the
+ * INTAN device configuration routines.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure to init.
+ */
 
 void initialize_INTAN(INTAN_config_struct* INTAN_config){
     disable_M_flag(INTAN_config);
@@ -139,6 +208,17 @@ void initialize_INTAN(INTAN_config_struct* INTAN_config){
     Else: exit the function
 
   */  
+/**
+ * @brief Send all queued SPI commands to the INTAN device and verify responses.
+ *
+ * This routine steps through the list of prepared commands in the
+ * provided configuration structure, toggles chip-select and sends each
+ * packet. After sending all packets it checks received values and sets
+ * the INTAN LED according to success.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure containing
+ *                      the command lists and response buffers.
+ */
 void send_SPI_commands(INTAN_config_struct* INTAN_config){
 
     /*
@@ -185,8 +265,15 @@ void send_SPI_commands(INTAN_config_struct* INTAN_config){
 }
 
 
+/**
+ * @brief Faster version of send_SPI_commands that skips some delays.
+ *
+ * Similar to send_SPI_commands but uses fewer delays to speed up transmission.
+ * Use with care if device timing constraints apply.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void send_SPI_commands_faster(INTAN_config_struct* INTAN_config){
-
     /*
     Se añade a la lista de envíos dos dummies para que se puedan comprobar todas las recepciones tras los envíos.
     Si no se hace esto entonces habría que implementar una lógica adicional de traslado de paquetes hacia el inicio de los que se han recibido y 
@@ -219,6 +306,18 @@ void send_SPI_commands_faster(INTAN_config_struct* INTAN_config){
 }
 
 // Funtion used to check if the returned values are correct or not
+/**
+ * @brief Check received SPI command responses against expected values.
+ *
+ * Iterates through the expected/obtained arrays in the configuration and
+ * validates that the received values match the expected ones when
+ * expected_RX_bool is set. Also performs specific status checks for
+ * compliance monitor and fault current detection instructions.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure holding
+ *                      expected and obtained response buffers.
+ * @return true if all checked responses match expectations, false otherwise.
+ */
 bool check_received_commands(INTAN_config_struct* INTAN_config){
     uint16_t index;
     // If the value to be compared actually does not mean anything (as if it a read function) return true
@@ -261,6 +360,12 @@ bool check_received_commands(INTAN_config_struct* INTAN_config){
     return true;
 }
 
+/**
+ * @brief Configure high cutoff frequency registers based on user settings.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure containing
+ *                      the desired high frequency magnitude and units.
+ */
 void fc_high(INTAN_config_struct* INTAN_config){
     uint8_t RH1_sel1;
     uint8_t RH1_sel2;
@@ -405,6 +510,14 @@ void fc_high(INTAN_config_struct* INTAN_config){
 
 }
 
+/**
+ * @brief Configure low cutoff frequency A registers.
+ *
+ * Uses the configured `fc_low_A` value to select register bits and writes
+ * the result using `write_command`.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void fc_low_A(INTAN_config_struct* INTAN_config){
     uint8_t RL_SEL1;
     uint8_t RL_SEL2;
@@ -550,6 +663,14 @@ void fc_low_A(INTAN_config_struct* INTAN_config){
 
 }
 
+/**
+ * @brief Configure low cutoff frequency B registers.
+ *
+ * Uses the configured `fc_low_B` value to select register bits and writes
+ * the result using `write_command`.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void fc_low_B(INTAN_config_struct* INTAN_config){
     uint8_t RL_SEL1;
     uint8_t RL_SEL2;
@@ -699,10 +820,23 @@ void fc_low_B(INTAN_config_struct* INTAN_config){
 
 
 
+/**
+ * @brief Power up AC amplifiers by writing the individual amp power register.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void power_up_AC(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, ADC_INDIVIDUAL_AMP_POWER, 0xFFFF);
 }
 
+/**
+ * @brief Selects which channels use cutoff frequency A or B and writes register.
+ *
+ * Builds a bitmask from `amplifier_cutoff_frequency_A_B` array and writes the
+ * `AMP_LOW_CUTOFF_FREQ_SELECT` register.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void A_or_B_cutoff_frequency(INTAN_config_struct* INTAN_config){
     uint8_t i;
     uint16_t amp_values = 0;
@@ -715,6 +849,13 @@ void A_or_B_cutoff_frequency(INTAN_config_struct* INTAN_config){
     INTAN_config->waiting_trigger = true;
 }
 
+/**
+ * @brief Enable fast-settle for amplifiers specified in `amplfier_reset`.
+ *
+ * Sets a time restriction for the register write and marks waiting_trigger.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void amp_fast_settle(INTAN_config_struct* INTAN_config){
     uint8_t i;
     uint16_t amp_values = 0;
@@ -730,6 +871,11 @@ void amp_fast_settle(INTAN_config_struct* INTAN_config){
 }
 
 
+/**
+ * @brief Reset fast-settle configuration for amplifiers (clear bits).
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void amp_fast_settle_reset(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, AMPLIFIER_FAST_SETTLE, 0x0000);
     INTAN_config->waiting_trigger = true;   
@@ -761,6 +907,15 @@ static const StepConfig step_table[] = {
 };
 
 
+/**
+ * @brief Convert a step size (nA) into the 16-bit register encoding.
+ *
+ * Looks up the step in `step_table` and encodes the sel1/sel2/sel3 fields
+ * into a single 16-bit register value suitable for writing.
+ *
+ * @param step_sel Desired step size in nA (e.g. 10, 20, 50...).
+ * @return uint16_t Encoded register value, or 0 if not found.
+ */
 uint16_t step_sel_united(uint16_t step_sel) {
     unsigned int i;
     for (i = (sizeof(step_table) / sizeof(step_table[0])) - 1; i < sizeof(step_table) / sizeof(step_table[0]); --i) {
@@ -776,7 +931,14 @@ uint16_t step_sel_united(uint16_t step_sel) {
     return 0; // Return 0 if step_sel is invalid
 }
 
-
+/**
+ * @brief Configure stimulation step DAC according to `step_DAC`.
+ *
+ * Looks up the step bits from `step_sel_united` and writes the
+ * `STIM_STEP_SIZE` register.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stim_step_DAC_configuration(INTAN_config_struct* INTAN_config){
     // uint16_t step_DAC_selected;
     uint16_t step_DAC_selected = step_sel_united(INTAN_config->step_DAC);
@@ -807,6 +969,15 @@ static const BiasVoltageConfig bias_voltage_table[] = {
     { /*10uA*/ 10000,    PBIAS_10uA,         NBIAS_10uA}
 };
 
+/**
+ * @brief Convert stimulation step (nA) to P/N bias register encoding.
+ *
+ * Looks up the requested step in `bias_voltage_table` and encodes the
+ * PBIAS/NBIAS fields into a single 16-bit register value.
+ *
+ * @param step_sel Desired step size in nA.
+ * @return uint16_t Encoded bias register value, or 0 if not found.
+ */
 uint16_t vias_voltages_sel(uint16_t step_sel) {
     unsigned int i;
     for (i = (sizeof(bias_voltage_table) / sizeof(bias_voltage_table[0])) - 1; i < sizeof(bias_voltage_table) / sizeof(bias_voltage_table[0]); --i) {
@@ -821,7 +992,14 @@ uint16_t vias_voltages_sel(uint16_t step_sel) {
     return 0; // Return 0 if step_sel is invalid
 }
 
-
+/**
+ * @brief Configure P/N bias voltages for stimulation from `step_DAC`.
+ *
+ * Uses `vias_voltages_sel` to compute register bits and writes
+ * `STIM_BIAS_VOLTAGE`.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stim_PNBIAS_configuration(INTAN_config_struct* INTAN_config){
     // uint16_t step_DAC_selected;
     uint16_t BIAS_selected = vias_voltages_sel(INTAN_config->step_DAC);
@@ -829,7 +1007,19 @@ void stim_PNBIAS_configuration(INTAN_config_struct* INTAN_config){
 
 }
 
-// Configuration of the current for each channel, channels start from 0 to 15
+/**
+ * @brief Configure stimulation current registers for a specific channel.
+ *
+ * The current configuration is written to the channel negative and positive
+ * current registers. If `channel` is out of range this function will halt.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ * @param channel Channel index (0..15) to configure.
+ * @param neg_current_trim 8-bit trim value for negative current.
+ * @param neg_current_mag 8-bit magnitude for negative current.
+ * @param pos_current_trim 8-bit trim value for positive current.
+ * @param pos_current_mag 8-bit magnitude for positive current.
+ */
 void stim_current_channel_configuration(INTAN_config_struct* INTAN_config, uint8_t channel, uint8_t neg_current_trim, uint8_t neg_current_mag, uint8_t pos_current_trim, uint8_t pos_current_mag){
     if (channel > 15){
         while(1){
@@ -848,6 +1038,11 @@ void stim_current_channel_configuration(INTAN_config_struct* INTAN_config, uint8
 }
 
 //Turn off all channels for the stimulation
+/**
+ * @brief Turn off stimulation for all channels in the configuration.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void all_stim_channels_off(INTAN_config_struct* INTAN_config){
     int i;
     for (i= NUM_CHANNELS-1; i>=0; i--){
@@ -856,6 +1051,11 @@ void all_stim_channels_off(INTAN_config_struct* INTAN_config){
 }
 
 // Stimulation on or off for each channel
+/**
+ * @brief Write stimulation on/off bitmask based on `stimulation_on` array.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stimulation_on(INTAN_config_struct* INTAN_config){
     uint8_t i;
     uint16_t stim_on = 0;
@@ -869,6 +1069,14 @@ void stimulation_on(INTAN_config_struct* INTAN_config){
 }
 
 // Selection of the stimulation polarity for each channel
+/**
+ * @brief Write stimulation polarity bitmask based on `stimulation_pol` array.
+ *
+ * Valid polarity characters are 'P' for positive and 'N' for negative.
+ * This function writes the `STIM_POLARITY` register and sets waiting_trigger.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stimulation_polarity(INTAN_config_struct* INTAN_config){
     uint8_t i;
     uint16_t stim_on = 0;
@@ -887,6 +1095,14 @@ void stimulation_polarity(INTAN_config_struct* INTAN_config){
 }
 
 
+/**
+ * @brief Faster polarity writer for stimulation, uses only channel 0.
+ *
+ * This helper writes polarity for channel 0 only and is intended for
+ * faster configuration paths.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stimulation_polarity_faster(INTAN_config_struct* INTAN_config){
     uint16_t stim_on = 0;
     if(INTAN_config->stimulation_pol[0] == 'P'){
@@ -901,11 +1117,21 @@ void stimulation_polarity_faster(INTAN_config_struct* INTAN_config){
     INTAN_config->waiting_trigger = true;
 }
 
+/**
+ * @brief Disable stimulation outputs (write zero to enable registers).
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stimulation_disable(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, STIM_ENABLE_A_reg, 0x0000);
     write_command(INTAN_config, STIM_ENABLE_B_reg, 0x0000);
 }
 
+/**
+ * @brief Enable stimulation outputs by writing activation values.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void stimulation_enable(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, STIM_ENABLE_A_reg, STIM_ENABLE_A_VALUE);
     write_command(INTAN_config, STIM_ENABLE_B_reg, STIM_ENABLE_B_VALUE);
@@ -1044,6 +1270,15 @@ void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config){
 }
 
 
+/**
+ * @brief Ultra-fast startup sequence for the INTAN stimulation subsystem.
+ *
+ * This function contains optimized, fewer-delay operations for very fast
+ * initialization. It is more low-level and should be used only when timing
+ * constraints are understood.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config){
 
     /*
@@ -1238,7 +1473,11 @@ void OFF_INTAN_FASTER(INTAN_config_struct* INTAN_config){
     // connect_channel_to_gnd(INTAN_config, 0);
 }
 
-// Clean the compliance monitor register
+/**
+ * @brief Clear the compliance monitor by issuing a read on the test register.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void clean_compliance_monitor(INTAN_config_struct* INTAN_config){
     enable_M_flag(INTAN_config);
     read_command(INTAN_config, REGISTER_VALUE_TEST, 't');
@@ -1246,13 +1485,24 @@ void clean_compliance_monitor(INTAN_config_struct* INTAN_config){
 }
 
 
-// Check the compliance monitor to see if all the channels are in a correct charging position
+/**
+ * @brief Request a read of the compliance monitor register to check channels.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void check_compliance_monitor(INTAN_config_struct* INTAN_config){
     read_command(INTAN_config, COMPLIANCE_MONITOR, 'M');
 }
 
-// Activate the charge recovery switch by connecting a channel to the stim_GND electrode witting in channel 46. 
-// Channels are connected one by one.
+/**
+ * @brief Connect a channel's recovery switch to the stim ground (one-by-one).
+ *
+ * Channel must be in range 0..15. This writes the `CHRG_RECOV_SWITCH` register
+ * with channel+1 as required by the device.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ * @param channel Channel index (0..15) to connect to ground.
+ */
 void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel){
     if (channel > 15){
         ON_INTAN_LED();
@@ -1263,6 +1513,11 @@ void connect_channel_to_gnd(INTAN_config_struct* INTAN_config, uint8_t channel){
     INTAN_config->waiting_trigger = true;
 }
 
+/**
+ * @brief Disconnect all channels from the stim ground (clear switch register).
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disconnect_channels_from_gnd(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, CHRG_RECOV_SWITCH, 0x0000);
     INTAN_config->waiting_trigger = true;
@@ -1290,6 +1545,15 @@ static const chrg_recov_curr_lim_config chrg_recov_curr_lim_table[] = {
     {  /*1000nA*/ 1000,  CL_SEL1_1uA,         CL_SEL2_1uA,         CL_SEL3_1uA }
 };
 
+/**
+ * @brief Convert charge recovery current selection (nA) into register encoding.
+ *
+ * Looks up the requested current limit in `chrg_recov_curr_lim_table` and
+ * encodes the sel1/sel2/sel3 fields into a single 16-bit register value.
+ *
+ * @param curr_lim_sel Desired current limit in nA.
+ * @return uint16_t Encoded register value or 0 if invalid.
+ */
 uint16_t chrg_recov_curr_lim_united(uint16_t curr_lim_sel) {
     unsigned int i;
     for (i = (sizeof(chrg_recov_curr_lim_table) / sizeof(chrg_recov_curr_lim_table[0])) - 1; i < sizeof(chrg_recov_curr_lim_table) / sizeof(chrg_recov_curr_lim_table[0]); --i) {
@@ -1305,13 +1569,27 @@ uint16_t chrg_recov_curr_lim_united(uint16_t curr_lim_sel) {
     return 0; // Return 0 if curr_lim_sel is invalid
 }
 
+/**
+ * @brief Configure the charge recovery current limit register using current_recovery.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void charge_recovery_current_configuration(INTAN_config_struct* INTAN_config){
     uint16_t current_lim_sel = chrg_recov_curr_lim_united(INTAN_config->current_recovery);
     write_command(INTAN_config, CHARGE_RECOVERY_CURRENT_LIMIT, current_lim_sel);
 }
 
 
-// Voltage at witch the electrodes will be driven with a concrete current value
+
+
+/**
+ * @brief Configure the charge recovery voltage target register.
+ *
+ * The voltage is clamped to device limits and converted to the device
+ * 8-bit representation before writing.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config){
     double voltage = INTAN_config->voltage_recovery;
     // Force the value of the voltage to be between +1.225 and -1.215
@@ -1331,17 +1609,34 @@ void charge_recovery_voltage_configuration(INTAN_config_struct* INTAN_config){
 }
 
 
+/**
+ * @brief Enable the charge recovery switch for a given channel.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ * @param channel Channel index (0..15) for which to enable charge recovery.
+ */
 void enable_charge_recovery_sw(INTAN_config_struct* INTAN_config, uint8_t channel){
     write_command(INTAN_config, CURR_LIM_CHRG_RECOV_EN, channel+1);
     INTAN_config->waiting_trigger = true;
 }
 
+/**
+ * @brief Disable all charge recovery switches.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disable_charge_recovery_sw(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, CURR_LIM_CHRG_RECOV_EN, 0x0000);
     INTAN_config->waiting_trigger = true;
 }
 
-// ADC Buffer Bias Current related registers
+/**
+ * @brief Configure ADC buffer bias and MUX bias according to sampling rate.
+ *
+ * Writes the computed bias value to the `ADC_BIAS_BUFFER` register.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config){
     uint16_t sampling_rate = INTAN_config->ADC_sampling_rate;
     uint8_t ADC_buffer_bias;
@@ -1380,7 +1675,13 @@ void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config){
 }
 
 
-// Impedance check control register 2 configuration
+/**
+ * @brief Configure impedance check control register 2 from INTAN_config fields.
+ *
+ * Validates `zcheck_select` and writes the `IMPEDANCE_CHECK_CONTROL` register.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void impedance_check_control(INTAN_config_struct* INTAN_config){
     uint8_t zcheck_select = INTAN_config->zcheck_select;
     bool zcheck_DAC_power = INTAN_config->zcheck_DAC_power;
@@ -1397,92 +1698,178 @@ void impedance_check_control(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, IMPEDANCE_CHECK_CONTROL, reg_value);
 }
 
-// Impedance check DAC value
+/**
+ * @brief Write the impedance check DAC value from `zcheck_DAC_value`.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void impedance_check_DAC(INTAN_config_struct* INTAN_config){
     write_command(INTAN_config, IMPEDANCE_CHECK_DAC, INTAN_config->zcheck_DAC_value);
+
 
 }
 
 
-
-// Fault current detection
+/**
+ * @brief Trigger a read to detect fault currents in the device.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void fault_current_detection(INTAN_config_struct* INTAN_config){
     read_command(INTAN_config, FAULT_CURR_DET, 'f');
 }
 
 
 // Enabling and controlling the digital external outputs 
+/**
+ * @brief Enable digital output 1 (clear half-frequency flag) and write reg1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void enable_digital_output_1(INTAN_config_struct* INTAN_config){
     INTAN_config->digout1HZ = 0;
     write_register_1(INTAN_config);
 }
+/**
+ * @brief Enable digital output 2 (clear half-frequency flag) and write reg1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void enable_digital_output_2(INTAN_config_struct* INTAN_config){
     INTAN_config->digout2HZ = 0;
     write_register_1(INTAN_config);
 }
 
 // Disabling digital output 1 and 2
+/**
+ * @brief Disable digital output 1 (set half-frequency flag) and write reg1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disable_digital_output_1(INTAN_config_struct* INTAN_config){
     INTAN_config->digout1HZ = 1;
     write_register_1(INTAN_config);
 }
+/**
+ * @brief Disable digital output 2 (set half-frequency flag) and write reg1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disable_digital_output_2(INTAN_config_struct* INTAN_config){
     INTAN_config->digout2HZ = 1;
     write_register_1(INTAN_config);
 }
 
 // ON output 1 or 2
+/**
+ * @brief Power on digital output 1 and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void power_ON_output_1(INTAN_config_struct* INTAN_config){
     INTAN_config->digout1 = 1;
     write_register_1(INTAN_config);
 }
+/**
+ * @brief Power on digital output 2 and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void power_ON_output_2(INTAN_config_struct* INTAN_config){
     INTAN_config->digout2 = 1;
     write_register_1(INTAN_config);
 }
 
 // OFF output 1 or 2
+/**
+ * @brief Power off digital output 1 and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void power_OFF_output_1(INTAN_config_struct* INTAN_config){
     INTAN_config->digout1 = 0;
     write_register_1(INTAN_config);
 }
+/**
+ * @brief Power off digital output 2 and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void power_OFF_output_2(INTAN_config_struct* INTAN_config){
     INTAN_config->digout2 = 0;
     write_register_1(INTAN_config);
 }
 
 // Compliment 2 enable and disable 
+/**
+ * @brief Enable complement 2 (C2) and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void enable_C2(INTAN_config_struct* INTAN_config){
     INTAN_config->C2_enabled = 1;
     write_register_1(INTAN_config);
 }
+/**
+ * @brief Disable complement 2 (C2) and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disable_C2(INTAN_config_struct* INTAN_config){
     INTAN_config->C2_enabled = 0;    
     write_register_1(INTAN_config);
 }
 
 // Enabling and disabling absolute value configuration
+/**
+ * @brief Enable absolute value mode and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void enable_absolute_value(INTAN_config_struct* INTAN_config){
     INTAN_config->abs_mode = true;    
     write_register_1(INTAN_config);
 }
 
+/**
+ * @brief Disable absolute value mode and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disable_absolute_value(INTAN_config_struct* INTAN_config){
     INTAN_config->abs_mode = false;    
     write_register_1(INTAN_config);
 }
 
 // Enable or disable the digital signal processing HPF
+/**
+ * @brief Disable the digital signal processing HPF and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void disable_digital_signal_processing_HPF(INTAN_config_struct* INTAN_config){
     INTAN_config->DSPen = false;
     write_register_1(INTAN_config);
 }
+/**
+ * @brief Enable the digital signal processing HPF and write register 1.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void enable_digital_signal_processing_HPF(INTAN_config_struct* INTAN_config){
     INTAN_config->DSPen = true;
     write_register_1(INTAN_config);
 }
 
 // Digital signal processing filter HPF cutoff frequency configuration
+/**
+ * @brief Compute and set DSP HPF cutoff frequency register based on config.
+ *
+ * Calculates normalized cutoff K and selects a register value which is
+ * written via `write_register_1`.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void DSP_cutoff_frequency_configuration(INTAN_config_struct* INTAN_config){
     float_t f_sampling;
     f_sampling = INTAN_config->ADC_sampling_rate*1000/INTAN_config->number_channels_to_convert; 
@@ -1534,6 +1921,14 @@ void DSP_cutoff_frequency_configuration(INTAN_config_struct* INTAN_config){
 
 // Write in register 1 the cutoff frequency of the digital signal processing HPF
 
+/**
+ * @brief Write register 1 using current INTAN_config register fields.
+ *
+ * Builds the 16-bit register value from various configuration flags
+ * and writes it using `write_command`.
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void write_register_1(INTAN_config_struct* INTAN_config){
     uint16_t DATA = 
     ((uint16_t)INTAN_config->digoutOD   << 12) |
@@ -1551,6 +1946,14 @@ void write_register_1(INTAN_config_struct* INTAN_config){
 
 // Minimum power disipation writting FFFF in register 38: error in hardware produces that this register must be all ones.
 
+/**
+ * @brief Set registers to minimize power dissipation for the device.
+ *
+ * Writes several registers to power down amplifiers and set magnitudes to
+ * zero (hardware requires some registers to be all ones due to an error).
+ *
+ * @param INTAN_config Pointer to the INTAN configuration structure.
+ */
 void minimum_power_disipation(INTAN_config_struct* INTAN_config){
 
     write_command(INTAN_config, DC_AMPLIFIER_POWER, 0xFFFF);

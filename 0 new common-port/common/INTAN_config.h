@@ -320,34 +320,12 @@ void impedance_check_DAC(INTAN_config_struct* INTAN_config);
 // Configuration of the ADC sampling rate, depending on the master's frequency of functioning
 void ADC_sampling_rate_config(INTAN_config_struct* INTAN_config);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Unify two values of 8 or 16 bits to one of 16 bits
 uint16_t unify_8bits(uint8_t high, uint8_t low);
 uint32_t unify_16bits(uint16_t high, uint16_t low);
 
 
-
-
-
-
-
-
 void split_uint16(uint16_t input, uint8_t* high_byte, uint8_t* low_byte);
-
 
 void wait_5_CYCLES();
 
