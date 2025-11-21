@@ -11,7 +11,7 @@
 ESP32SPISlave slave;
 
 /* SPI reenvío de nuevos parámetros */
-static constexpr size_t SPI_data_send = 23;
+static constexpr size_t SPI_data_send = 25;
 uint8_t spi_rx_buf[SPI_data_send] = { 0 };
 uint8_t spi_tx_buf[SPI_data_send] = { 0 };
 
@@ -19,6 +19,8 @@ uint8_t spi_tx_buf[SPI_data_send] = { 0 };
 uint16_t ADC_sampling_rate = 13;           
 uint8_t Channels_to_convert = 0;
 bool DSP_enabled = false;
+bool C2_enabled = false;
+bool Absolute_value_mode = false;
 float DSP_cutoff_frequency = 1000.0;        
 uint8_t Initial_channel = 0;
 float fc_high_magnitude = 0;
@@ -75,6 +77,7 @@ bool parameters_updated = false;
 uint32_t received_bytes;
 uint32_t received_bytes_ECG;
 uint32_t received_bytes_counter;
+
 
 
 /*
@@ -143,18 +146,19 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     // Serial.println(value);
 
     // Parse robusto por comas
-    String tokens[10]; // Esperamos 10 parámetros
+    int max_tokens = 12;
+    String tokens[max_tokens]; // Esperamos 10 parámetros
     int start = 0;
     int commaIndex = value.indexOf(',');
     int i = 0;
-    while (commaIndex != -1 && i < 9) {
+    while (commaIndex != -1) {
       tokens[i++] = value.substring(start, commaIndex);
       start = commaIndex + 1;
       commaIndex = value.indexOf(',', start);
     }
     tokens[i++] = value.substring(start); // último token
 
-    if (i == 10) { // Validamos cantidad correcta
+    if (i == max_tokens) { // Validamos cantidad correcta
       ADC_sampling_rate = tokens[0].toInt();
       DSP_cutoff_frequency = tokens[1].toFloat();
       Channels_to_convert = tokens[2].toInt();
@@ -165,13 +169,19 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       fc_low_A = tokens[7].toFloat();
       fc_low_B = tokens[8].toFloat();
       amplifier_cutoff = tokens[9].charAt(0);
+      C2_enabled = tokens[10].toInt();
+      Absolute_value_mode = tokens[11].toInt();
 
-      Serial.printf("ADC: %d\n", ADC_sampling_rate);
+
+      // Serial.printf("ADC: %d\n", ADC_sampling_rate);
       // Serial.println("Parámetros actualizados correctamente:");
       // Serial.printf("ADC: %d, DSP freq: %.2f, Channels: %d\n", ADC_sampling_rate, DSP_cutoff_frequency, Channels_to_convert);
       // Serial.printf("DSP enabled: %d, Initial ch: %d\n", DSP_enabled, Initial_channel);
       // Serial.printf("fc_high: %.2f%c, fc_low_A: %.2f, fc_low_B: %.2f\n", fc_high_magnitude, fc_high_unit, fc_low_A, fc_low_B);
       // Serial.printf("amplifier_cutoff: %c\n", amplifier_cutoff);
+
+      Serial.printf("C2_enabled: %d\n", C2_enabled);
+      Serial.printf("Absolute_value_mode: %d\n", Absolute_value_mode);
 
       RX_BT = true;
     } else {
@@ -299,6 +309,9 @@ void loop() {
       spi_tx_buf[21] = fc_low_B_bytes[3];
 
       spi_tx_buf[22] = amplifier_cutoff;
+
+      spi_tx_buf[23] = C2_enabled;
+      spi_tx_buf[24] = Absolute_value_mode;
 
 
       ON_NEW_PARAM_PIN();
