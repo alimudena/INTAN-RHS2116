@@ -169,7 +169,7 @@ void stimulation_on(INTAN_config_struct* INTAN_config);
 
 // Selection of the stimulation polarity for each channel
 void stimulation_polarity(INTAN_config_struct* INTAN_config);
-void stimulation_polarity_faster(INTAN_config_struct* INTAN_config);
+void stimulation_polarity_faster(INTAN_config_struct* INTAN_config, uint8_t channel);
 
 // Writting in the registers 32 and 33 values for enabling and disabling the stimulation
 void stimulation_disable(INTAN_config_struct* INTAN_config);
@@ -177,8 +177,8 @@ void stimulation_enable(INTAN_config_struct* INTAN_config);
 
 
 void ON_INTAN(INTAN_config_struct* INTAN_config);
-void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config);
-void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config);
+void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config, uint8_t channel);
+void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config, uint8_t channel);
 void OFF_INTAN(INTAN_config_struct* INTAN_config);
 void OFF_INTAN_FASTER(INTAN_config_struct* INTAN_config);
 

@@ -1103,11 +1103,11 @@ void stimulation_polarity(INTAN_config_struct* INTAN_config){
  *
  * @param INTAN_config Pointer to the INTAN configuration structure.
  */
-void stimulation_polarity_faster(INTAN_config_struct* INTAN_config){
+void stimulation_polarity_faster(INTAN_config_struct* INTAN_config, uint8_t channel){
     uint16_t stim_on = 0;
-    if(INTAN_config->stimulation_pol[0] == 'P'){
+    if(INTAN_config->stimulation_pol[channel] == 'P'){
         stim_on = stim_on | (1<<(0));
-    }else if (INTAN_config->stimulation_pol[0] == 'N') {
+    }else if (INTAN_config->stimulation_pol[channel] == 'N') {
     
     }else{
         perror("Not correct polarity selected");
@@ -1204,15 +1204,15 @@ void ON_INTAN(INTAN_config_struct* INTAN_config){
 }
 
 
-void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config){
+void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config, uint8_t channel){
 
     /*
             CONSTANT CURRENT STIMULATOR 
     */
-    stimulation_polarity_faster(INTAN_config); 
+    stimulation_polarity_faster(INTAN_config, channel); 
     send_SPI_commands_faster(INTAN_config);
     //To make sure the polarity is well written
-    stimulation_polarity_faster(INTAN_config); 
+    stimulation_polarity_faster(INTAN_config, channel); 
     send_SPI_commands_faster(INTAN_config);
 
     /*
@@ -1225,10 +1225,10 @@ void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config){
     /*
             CONSTANT CURRENT STIMULATOR 
     */
-    stimulation_polarity_faster(INTAN_config); 
+    stimulation_polarity_faster(INTAN_config, channel);
     send_SPI_commands_faster(INTAN_config);
     //To make sure the polarity is well written
-    stimulation_polarity_faster(INTAN_config); 
+    stimulation_polarity_faster(INTAN_config, channel);
     send_SPI_commands_faster(INTAN_config);
 
     // stimulators on
@@ -1279,7 +1279,7 @@ void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config){
  *
  * @param INTAN_config Pointer to the INTAN configuration structure.
  */
-void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config){
+void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config, uint8_t channel){
 
     /*
             CONSTANT CURRENT STIMULATOR 
@@ -1287,9 +1287,9 @@ void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config){
     // stimulation_polarity_faster(INTAN_config); 
 
         uint16_t stim_on = 0;
-        if(INTAN_config->stimulation_pol[0] == 'P'){
+        if(INTAN_config->stimulation_pol[channel] == 'P'){
             stim_on = stim_on | (1<<(0));
-        }else if (INTAN_config->stimulation_pol[0] == 'N') {
+        }else if (INTAN_config->stimulation_pol[channel] == 'N') {
         
         }else{
             perror("Not correct polarity selected");
@@ -1327,9 +1327,9 @@ void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config){
    // stimulation_polarity_faster(INTAN_config); 
 
         stim_on = 0;
-        if(INTAN_config->stimulation_pol[0] == 'P'){
+        if(INTAN_config->stimulation_pol[channel] == 'P'){
             stim_on = stim_on | (1<<(0));
-        }else if (INTAN_config->stimulation_pol[0] == 'N') {
+        }else if (INTAN_config->stimulation_pol[channel] == 'N') {
         
         }else{
             perror("Not correct polarity selected");
@@ -1409,10 +1409,10 @@ void ON_INTAN_FASTER_FASTER(INTAN_config_struct* INTAN_config){
     /*
             CONSTANT CURRENT STIMULATOR 
     */
-    stimulation_polarity_faster(INTAN_config); 
+    stimulation_polarity_faster(INTAN_config, channel);
     send_SPI_commands_faster(INTAN_config);
     //To make sure the polarity is well written
-    stimulation_polarity_faster(INTAN_config); 
+    stimulation_polarity_faster(INTAN_config, channel);
     send_SPI_commands_faster(INTAN_config);
 
     // stimulators on

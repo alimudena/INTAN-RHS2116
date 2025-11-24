@@ -310,8 +310,8 @@ void update_stim_parameters(){
               if(!INTAN_programmed){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'P';
-                ON_INTAN_FASTER(&INTAN_config);
-                // ON_INTAN_FASTER(&INTAN_config);
+                ON_INTAN_FASTER(&INTAN_confi, channel);
+                // ON_INTAN_FASTER(&INTAN_config, channel);
                 INTAN_programmed = true;
               }
               
@@ -345,7 +345,7 @@ void update_stim_parameters(){
               if(!INTAN_programmed){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'N';
-                ON_INTAN_FASTER(&INTAN_config);
+                ON_INTAN_FASTER(&INTAN_config, channel);
                 // ON_INTAN(&INTAN_config);
                 INTAN_programmed = true;
               }
@@ -614,8 +614,8 @@ if(esp32_connected){
                         if(!INTAN_programmed){
                           INTAN_config.stimulation_on[0] = 1;
                           INTAN_config.stimulation_pol[0] = 'P';
-                          ON_INTAN_FASTER(&INTAN_config);
-                          // ON_INTAN_FASTER(&INTAN_config);
+                          ON_INTAN_FASTER(&INTAN_config, channel);
+                          // ON_INTAN_FASTER(&INTAN_config, channel);
                           INTAN_programmed = true;
                         }
                         
@@ -649,8 +649,8 @@ if(esp32_connected){
                         if(!INTAN_programmed){
                           INTAN_config.stimulation_on[0] = 1;
                           INTAN_config.stimulation_pol[0] = 'N';
-                          ON_INTAN_FASTER(&INTAN_config);
-                          // ON_INTAN(&INTAN_config);
+                          ON_INTAN_FASTER(&INTAN_config, channel);
+                          // ON_INTAN(&INTAN_config, channel);
                           INTAN_programmed = true;
                         }
 

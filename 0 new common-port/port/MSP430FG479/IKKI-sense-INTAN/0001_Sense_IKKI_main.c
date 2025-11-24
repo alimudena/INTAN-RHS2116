@@ -314,8 +314,8 @@ void configure_INTAN(INTAN_config_struct* INTAN_config){
 //               if(!INTAN_programmed){
 //                 INTAN_config.stimulation_on[0] = 1;
 //                 INTAN_config.stimulation_pol[0] = 'P';
-//                 ON_INTAN_FASTER(&INTAN_config);
-//                 // ON_INTAN_FASTER(&INTAN_config);
+//                 ON_INTAN_FASTER_FASTER(INTAN_config, channel):
+//                 ON_INTAN_FASTER_FASTER(INTAN_config, channel)
 //                 INTAN_programmed = true;
 //               }
               
