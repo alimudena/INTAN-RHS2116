@@ -23,7 +23,8 @@
 #define CLK_50_CYCLES 50
 
 
-#define NUM_CHANNELS 16
+// #define NUM_CHANNELS 16
+#define NUM_CHANNELS 2
 
 #define MAX_VALUES 45
 
