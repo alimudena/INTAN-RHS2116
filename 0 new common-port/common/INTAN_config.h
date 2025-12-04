@@ -125,8 +125,9 @@ typedef struct{
     uint8_t positive_current_trim[NUM_CHANNELS];
     uint8_t positive_current_magnitude[NUM_CHANNELS];
 
-    uint32_t MASTER_FREQ; 
+    uint64_t MASTER_FREQ; 
 
+    bool single_shot;
     
 
     } INTAN_config_struct;

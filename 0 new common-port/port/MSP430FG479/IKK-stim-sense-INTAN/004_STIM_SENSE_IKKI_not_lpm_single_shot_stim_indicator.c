@@ -162,6 +162,7 @@ uint8_t RX;
 bool new_parameters;
 bool esp32_connected;
 bool sent = false;
+bool locked_button = false;
 
 
 /*
@@ -866,9 +867,11 @@ int main(void)
                                                                               TACCR0 = divider_value;
 
 
+  //************************** ESP32 indicator setup ************************** 
   ESP32_connected_setup();
   esp32_connected =  ESP32_connected();
   ESP32_LED_setup();
+  stim_indicator_setup();
 
   if(esp32_connected){
     /* NOT LOW POWER CONFIGURATION */
@@ -912,7 +915,7 @@ int main(void)
 
   call_configuration_functions(&INTAN_config);
 
-
+  INTAN_config.single_shot = false;
   while(1){
     switch (general_state) {
       case ENVIO_INTAN:{ // Estado 1: Muestreo del ECG y envío a través de SPI al ESP32
@@ -968,107 +971,142 @@ int main(void)
             timer_flag_on_off++;
 
             // update_stim_parameters(); 
-            if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
-              // ON_pin();
-              switch (state_stimulation) {
-                case STIM:
-                  if(timer_flag_stim_rest >= stim_rest_time){
-                    state_stimulation = REST;
-                    timer_flag_stim_rest = 0;
-                    stim_rest_time = INTAN_config.resting_time;
-                    number_of_stimulations_done++;
-                    INTAN_programmed = false;
-
-                    break;
-                  }
-                    switch (state_stimulation_ON_OFF) {
-                      case ON_P:
-                        if(timer_flag_on_off >=  INTAN_config.stimulation_on_time){
-                          state_stimulation_ON_OFF = OFF_P;
-                          timer_flag_on_off = 0;
-                          // stim_on_off_time = INTAN_config.stimulation_off_time;
-                          INTAN_programmed = false;
-                          break;
-                        }          
-                        if(!INTAN_programmed){
-                          INTAN_config.stimulation_on[stim_channel] = 1;
-                          INTAN_config.stimulation_pol[stim_channel] = 'P';
-                          ON_INTAN_FASTER(&INTAN_config, stim_channel);
-                          INTAN_programmed = true;
-                        }
-                        
-                        break;
-
-                      case OFF_P:
-                        if(timer_flag_on_off >= INTAN_config.stimulation_off_time){
-                          state_stimulation_ON_OFF = ON_N;
-                          timer_flag_on_off = 0;
-                          // stim_on_off_time = INTAN_config.stimulation_on_time;
-                          INTAN_programmed = false;
-                          break;
-                        }          
-                        if(!INTAN_programmed){
-                          OFF_INTAN_FASTER(&INTAN_config);                          
-                          INTAN_programmed = true;
-                        }
-                        
-                        
-                        break;
-
-                      case ON_N:
-                        if(timer_flag_on_off >= INTAN_config.stimulation_on_time){
-                          state_stimulation_ON_OFF = OFF_N;
-                          timer_flag_on_off = 0;
-                          // stim_on_off_time = INTAN_config.stimulation_off_time;
-                          INTAN_programmed = false;
-                          break;
-                        }
-                        if(!INTAN_programmed){
-                          INTAN_config.stimulation_on[stim_channel] = 1;
-                          INTAN_config.stimulation_pol[stim_channel] = 'N';
-                          ON_INTAN_FASTER(&INTAN_config, stim_channel);
-                          INTAN_programmed = true;
-                        }
-
-                        
-                        break;
-
-                      case  OFF_N:
-                        if(timer_flag_on_off >= INTAN_config.stimulation_off_time){
-                          state_stimulation_ON_OFF = ON_P;
-                          timer_flag_on_off = 0;
-                          // stim_on_off_time = INTAN_config.stimulation_on_time;
-                          INTAN_programmed = false;
-                          break;
-                        }
-                        if(!INTAN_programmed){
-                          OFF_INTAN_FASTER(&INTAN_config);
-                          INTAN_programmed = true;
-                        }
-                        break;
-
-                    }
-                  break;
-
-                case REST:
+            if(INTAN_config.single_shot == false){
+              if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
+                // ON_pin();
+                switch (state_stimulation) {
+                  case STIM:
                     if(timer_flag_stim_rest >= stim_rest_time){
-                      state_stimulation = STIM;
+                      state_stimulation = REST;
                       timer_flag_stim_rest = 0;
-                      stim_rest_time = INTAN_config.stimulation_time;
-                      state_stimulation_ON_OFF = ON_P;
+                      stim_rest_time = INTAN_config.resting_time;
+                      number_of_stimulations_done++;
                       INTAN_programmed = false;
+
                       break;
                     }
-                    if(!INTAN_programmed){
-                      OFF_INTAN_FASTER(&INTAN_config);
-                      INTAN_programmed = true;
-                    }
-                  break;
-              
+                      switch (state_stimulation_ON_OFF) {
+                        case ON_P:
+                          if(timer_flag_on_off >=  INTAN_config.stimulation_on_time){
+                            state_stimulation_ON_OFF = OFF_P;
+                            timer_flag_on_off = 0;
+                            // stim_on_off_time = INTAN_config.stimulation_off_time;
+                            INTAN_programmed = false;
+                            break;
+                          }          
+                          if(!INTAN_programmed){
+                            INTAN_config.stimulation_on[stim_channel] = 1;
+                            INTAN_config.stimulation_pol[stim_channel] = 'P';
+                            ON_INTAN_FASTER(&INTAN_config, stim_channel);
+                            stim_indicator_ON();
+                            INTAN_programmed = true;
+                          }
+                          
+                          break;
+
+                        case OFF_P:
+                          if(timer_flag_on_off >= INTAN_config.stimulation_off_time){
+                            state_stimulation_ON_OFF = ON_N;
+                            timer_flag_on_off = 0;
+                            // stim_on_off_time = INTAN_config.stimulation_on_time;
+                            INTAN_programmed = false;
+                            break;
+                          }          
+                          if(!INTAN_programmed){
+                            OFF_INTAN_FASTER(&INTAN_config);   
+                            stim_indicator_OFF();
+                            INTAN_programmed = true;
+                          }
+                          
+                          
+                          break;
+
+                        case ON_N:
+                          if(timer_flag_on_off >= INTAN_config.stimulation_on_time){
+                            state_stimulation_ON_OFF = OFF_N;
+                            timer_flag_on_off = 0;
+                            // stim_on_off_time = INTAN_config.stimulation_off_time;
+                            INTAN_programmed = false;
+                            break;
+                          }
+                          if(!INTAN_programmed){
+                            INTAN_config.stimulation_on[stim_channel] = 1;
+                            INTAN_config.stimulation_pol[stim_channel] = 'N';
+                            ON_INTAN_FASTER(&INTAN_config, stim_channel);
+                            stim_indicator_ON();
+                            INTAN_programmed = true;
+                          }
+
+                          
+                          break;
+
+                        case  OFF_N:
+                          if(timer_flag_on_off >= INTAN_config.stimulation_off_time){
+                            state_stimulation_ON_OFF = ON_P;
+                            timer_flag_on_off = 0;
+                            // stim_on_off_time = INTAN_config.stimulation_on_time;
+                            INTAN_programmed = false;
+                            break;
+                          }
+                          if(!INTAN_programmed){
+                            OFF_INTAN_FASTER(&INTAN_config);
+                            stim_indicator_OFF();
+                            INTAN_programmed = true;
+                          }
+                          break;
+
+                      }
+                    break;
+
+                  case REST:
+                      if(timer_flag_stim_rest >= stim_rest_time){
+                        state_stimulation = STIM;
+                        timer_flag_stim_rest = 0;
+                        stim_rest_time = INTAN_config.stimulation_time;
+                        state_stimulation_ON_OFF = ON_P;
+                        INTAN_programmed = false;
+                        break;
+                      }
+                      if(!INTAN_programmed){
+                        OFF_INTAN_FASTER(&INTAN_config);
+                        stim_indicator_OFF();
+                        INTAN_programmed = true;
+                      }
+                    break;
+                
+                }
+              }else{
+                next_stim = button_pressed();
+                OFF_pin();
               }
             }else{
+
               next_stim = button_pressed();
-              OFF_pin();
+              if(next_stim){
+                if(!locked_button){
+                  INTAN_programmed = false;
+                  timer_flag_on_off = 0;
+
+                }
+                locked_button = true;
+              }else{
+                locked_button = false;
+              }
+              if(!INTAN_programmed){
+                INTAN_config.stimulation_on[stim_channel] = 1;
+                INTAN_config.stimulation_pol[stim_channel] = 'P';
+                ON_INTAN_FASTER(&INTAN_config, stim_channel);
+                INTAN_programmed = true;
+              }
+              if(timer_flag_on_off >=  INTAN_config.stimulation_on_time){
+                OFF_INTAN_FASTER(&INTAN_config);
+                break;
+              }   
+
+
+              
+
+
             }
           }
         }

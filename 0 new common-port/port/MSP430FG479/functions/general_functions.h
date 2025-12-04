@@ -28,6 +28,12 @@ void stim_en_setup();
 void stim_en_ON();
 void stim_en_OFF();
 
+//stim_indicator for ESP32
+void stim_indicator_setup();
+void stim_indicator_ON();
+void stim_indicator_OFF();
+
+
 //Button pressed for external interaction
 void button_init();
 bool button_pressed();

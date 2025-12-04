@@ -297,17 +297,9 @@ def run_gui():
     # ID
     ttk.Label(frame_A, text="Experiment ID").grid(row=row_i, column=0, sticky="w", padx=3, pady=1)
     entry_id = ttk.Entry(frame_A, width=18)
+    # entry_id[-1].insert(0, "R1")
     entry_id.grid(row=row_i, column=1, sticky="e", padx=3, pady=1)
     row_i += 1
-
-    # Campos compactados
-    add_row("ADC sampling rate (kHz)", ttk.Entry(frame_A, width=18))
-    add_row("DSP cutoff frequency (Hz)", ttk.Entry(frame_A, width=18))
-    add_row("Channels (max 15)", ttk.Entry(frame_A, width=18))
-    add_row("DSP enabled", ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly"))
-    add_row("Initial channel", ttk.Entry(frame_A, width=18))
-    add_row("fc high magnitude", ttk.Entry(frame_A, width=18))
-    add_row("fc high unit", ttk.Combobox(frame_A, values=["kHz", "Hz"], width=16, state="readonly"))
 
     allowed_fc_low = [
         "1000","500","250","200","100","75","50","30","25","20","15",
@@ -315,12 +307,51 @@ def run_gui():
         "0.25","0.1"
     ]
 
-    add_row("fc low A", ttk.Combobox(frame_A, values=allowed_fc_low, width=16, state="readonly"))
-    add_row("fc low B", ttk.Combobox(frame_A, values=allowed_fc_low, width=16, state="readonly"))
-    add_row("Amplifier cutoff", ttk.Combobox(frame_A, values=["A", "B"], width=16, state="readonly"))
 
-    add_row("C2 enabled", ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly"))
-    add_row("Absolute value mode", ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly"))
+    # Campos compactados
+    add_row("ADC sampling rate (kHz)", ttk.Entry(frame_A, width=18))
+    entries_a[-1].insert(0, "1.3")
+
+    add_row("DSP cutoff frequency (Hz)", ttk.Entry(frame_A, width=18))
+    entries_a[-1].insert(0, "40")
+
+    add_row("Channels (max 15)", ttk.Entry(frame_A, width=18))
+    entries_a[-1].insert(0, "1")
+
+    cb = ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly")
+    add_row("DSP enabled", cb)
+    cb.set("1")   # ✔
+
+    add_row("Initial channel", ttk.Entry(frame_A, width=18))
+    entries_a[-1].insert(1, "1")
+
+    add_row("fc high magnitude", ttk.Entry(frame_A, width=18))
+    entries_a[-1].insert(0, "1000")
+
+    cb = ttk.Combobox(frame_A, values=["kHz", "Hz"], width=16, state="readonly")
+    add_row("fc high unit", cb)
+    cb.set("Hz")   # ✔
+
+    cb = ttk.Combobox(frame_A, values=allowed_fc_low, width=16, state="readonly")
+    add_row("fc low A", cb)
+    cb.set("10")
+
+    cb = ttk.Combobox(frame_A, values=allowed_fc_low, width=16, state="readonly")
+    add_row("fc low B", cb)
+    cb.set("10")
+
+    cb = ttk.Combobox(frame_A, values=["A", "B"], width=16, state="readonly")
+    add_row("Amplifier cutoff", cb)
+    cb.set("A")
+
+    cb = ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly")
+    add_row("C2 enabled", cb)
+    cb.set("0")
+
+    cb = ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly")
+    add_row("Absolute value mode", cb)
+    cb.set("0")
+
     
 
 
@@ -347,6 +378,21 @@ def run_gui():
         entry = ttk.Entry(row, width=20)
         entry.pack(side="right", padx=5)
         entries_b.append(entry)
+    # Number of stimulations
+    entries_b[0].insert(0, "10")
+
+    # Resting time (mins)
+    entries_b[1].insert(0, "1")
+
+    # Stimulation time (s)
+    entries_b[2].insert(0, "30")
+
+    # Stimulation ON time (µs)
+    entries_b[3].insert(0, "1000")
+
+    # Stimulation OFF time (ms)
+    entries_b[4].insert(0, "50")
+
 
     # ================== PARÁMETROS C ==================
     frame_C = ttk.LabelFrame(frame_params_container, text="Current parameters", padding=10)
@@ -386,6 +432,10 @@ def run_gui():
     step_dropdown["values"] = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
     step_dropdown.current(0)
     step_dropdown.pack(side="right", padx=5)
+
+    entry_pos_mag.insert(0, "10")
+    entry_neg_mag.insert(0, "10")
+    step_var.set("100")    # ✔ por defecto (nA)
 
     # ---------- SUBSECCIÓN DE RESULTADOS ----------
     subframe_result = ttk.LabelFrame(frame_C, text="Current calculation", padding=10)

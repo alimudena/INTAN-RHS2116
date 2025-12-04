@@ -37,6 +37,8 @@ void ON_pin(){                               // On
     P4OUT |= 0x40;
 }
 
+
+
 //*****************************************************************************
 /*error LED for INTAN*/
 //*****************************************************************************
@@ -163,7 +165,7 @@ void ON_ESP32_LED(){                               // On
 //*****************************************************************************
 
 void stim_en_setup(){
-    P4DIR |= BIT5;                            // Set P4.4 to output direction
+    P4DIR |= BIT5;                            // Set P4.5 to output direction
 }
 
 void stim_en_ON(){                               // On 
@@ -174,6 +176,26 @@ void stim_en_OFF(){
     P4OUT &= ~0x20;                          // Off   
 }
 
+//*****************************************************************************
+/*stim_ON for ESP32*/
+//*****************************************************************************
+void stim_indicator_setup(){
+    P5DIR |= BIT3;                            // Set P5.3 to output direction
+
+
+}
+
+void stim_indicator_ON(){
+    P5OUT |= 0x08;
+
+
+}
+
+void stim_indicator_OFF(){
+    P5OUT &= ~0x08;                          // Off   
+
+
+}
 
 //*****************************************************************************
 /*button_pressed for external ineraction*/

@@ -130,7 +130,7 @@ INTAN_config_struct INTAN_config;
 SPI_config_struct SPI_config;
 SPI_B_config_struct SPI_B_config;
 
-
+uint8_t channel = 0;
 
 //************************** other parameters ************************** 
 
@@ -310,7 +310,7 @@ void update_stim_parameters(){
               if(!INTAN_programmed){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'P';
-                ON_INTAN_FASTER(&INTAN_confi, channel);
+                ON_INTAN_FASTER(&INTAN_config, channel);
                 // ON_INTAN_FASTER(&INTAN_config, channel);
                 INTAN_programmed = true;
               }
@@ -443,6 +443,18 @@ void config_CLK(CLK_config_struct* CLK_config){
   // Second oscillator ON OFF
   CLK_config->LFXT2_osc_on = false;
 }
+void config_CLK_8MHz(CLK_config_struct CLK_config){
+  stop_wd();
+  CLK_config.DCO_range = 4;
+  CLK_config.N_MCLK = 121;
+  CLK_config.DCOPLUS_on = true;
+  CLK_config.D_val = 1;
+  DCO_f_range(CLK_config.DCO_range);
+  configure_N_for_MCLK (CLK_config.N_MCLK);
+  LFXT1_internal_cap_config(18);
+  FLL_CTL0 |= DCOPLUS;           // DCO+ set so freq= xtal x D x N+1  
+  // configure_PINS_for_clk_debug();
+}
 
 int main(void)
 {
@@ -456,7 +468,8 @@ int main(void)
 
 
   //************************** CLK configuration *****************************
-  config_CLK(&CLK_config);
+  // config_CLK(&CLK_config);
+  config_CLK_8MHz(CLK_config);
   run_functions_setup_CLK(CLK_config);
 
   //************************** LED configuration *****************************
@@ -742,9 +755,9 @@ if(esp32_connected){
         ON_CS_ESP_PARAM_pin();
         stimulation_on_time_micro = ((uint16_t)high_byte_stimulation_on_time_micro << 8) | low_byte_stimulation_on_time_micro;
         step_DAC = ((uint16_t)high_byte_step_DAC << 8) | low_byte_step_DAC;
-
-        INTAN_config.resting_time = resting_time_seconds*60*INTAN_config.MASTER_FREQ/divider_value*2;
-        INTAN_config.stimulation_time = stimulation_time_seconds*INTAN_config.MASTER_FREQ/divider_value*2;
+        INTAN_config.MASTER_FREQ = 8000000;
+        INTAN_config.resting_time = resting_time_seconds*60*INTAN_config.MASTER_FREQ/divider_value;
+        INTAN_config.stimulation_time = stimulation_time_seconds*INTAN_config.MASTER_FREQ/divider_value;
         INTAN_config.stimulation_on_time = stimulation_on_time_micro*(INTAN_config.MASTER_FREQ/divider_value)/1000000;
         INTAN_config.stimulation_off_time = stimulation_off_time_milis*INTAN_config.MASTER_FREQ/(1000*divider_value);
 
