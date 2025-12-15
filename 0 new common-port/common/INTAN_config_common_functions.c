@@ -1222,9 +1222,9 @@ void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config, uint8_t channel){
     clean_compliance_monitor(INTAN_config);
     send_SPI_commands_faster(INTAN_config);
     disable_U_flag(INTAN_config);
-    /*
-            CONSTANT CURRENT STIMULATOR 
-    */
+    // /*
+    //         CONSTANT CURRENT STIMULATOR 
+    // */
     stimulation_polarity_faster(INTAN_config, channel);
     send_SPI_commands_faster(INTAN_config);
     //To make sure the polarity is well written
@@ -1249,9 +1249,9 @@ void ON_INTAN_FASTER(INTAN_config_struct* INTAN_config, uint8_t channel){
     stimulation_enable(INTAN_config);
     send_SPI_commands_faster(INTAN_config);
 
-    /*
-            U AND M FLAGS
-    */
+    // /*
+    //         U AND M FLAGS
+    // */
     enable_U_flag(INTAN_config);
     enable_M_flag(INTAN_config);
     read_command(INTAN_config, 255, 'E');

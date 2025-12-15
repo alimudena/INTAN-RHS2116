@@ -70,6 +70,11 @@ void ESP32_LED_setup();
 void OFF_ESP32_LED();
 void ON_ESP32_LED();
 
+// HANDSHAKE pin
+void HSHK_setup();
+bool HSHK_value();
+
+
 // end
 
 

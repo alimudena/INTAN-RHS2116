@@ -44,7 +44,7 @@ uint8_t MOSI_PIN_PARAM = 18;
 uint8_t SCLK_PIN_PARAM = 16;
 uint8_t CS_ESP32_PIN_PARAM = 15;
 
-static constexpr size_t buf_size = 3;
+static constexpr size_t buf_size = 6;
 uint8_t tx_buf_ECG[buf_size] = { 0xAA };
 uint8_t rx_buf[buf_size] = { 0x00 };
 uint32_t spi_data_index = 0;

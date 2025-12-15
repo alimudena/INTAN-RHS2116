@@ -561,6 +561,11 @@ def run_gui():
     # Current step (único dropdown)
     row_step = ttk.Frame(frame_C)
     row_step.pack(fill="x", pady=2)
+    
+    cb = ttk.Combobox(frame_A, values=["0", "1"], width=16, state="readonly")
+    add_row("DSP enabled", cb)
+    cb.set("1")   # ✔
+
     ttk.Label(row_step, text="Current step (nA)", width=35).pack(side="left")
     step_var = tk.StringVar()
     step_dropdown = ttk.Combobox(row_step, textvariable=step_var, state="readonly", width=18)

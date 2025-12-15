@@ -20,7 +20,16 @@
 #define CLK_2_CYCLES 2
 #define CLK_5_CYCLES 5
 #define CLK_10_CYCLES 10
+#define CLK_15_CYCLES 15
+#define CLK_25_CYCLES 25
 #define CLK_50_CYCLES 50
+#define CLK_500_CYCLES 500
+#define CLK_2500_CYCLES 2500
+#define CLK_3000_CYCLES 3000
+#define CLK_1000_CYCLES 1000
+#define CLK_5000_CYCLES 5000
+#define CLK_10000_CYCLES 10000
+#define CLK_50000_CYCLES 50000
 
 
 // #define NUM_CHANNELS 16
@@ -128,6 +137,8 @@ typedef struct{
     uint64_t MASTER_FREQ; 
 
     bool single_shot;
+
+    bool bipolar;
     
 
     } INTAN_config_struct;

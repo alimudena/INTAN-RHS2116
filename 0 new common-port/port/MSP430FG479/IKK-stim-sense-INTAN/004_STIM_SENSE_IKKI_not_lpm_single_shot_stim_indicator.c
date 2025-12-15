@@ -176,7 +176,7 @@ SPI_config_struct SPI_config;
 SPI_B_config_struct SPI_B_config;
 
 
-uint8_t channel = 1;
+uint8_t channel = 2;
 uint8_t stim_channel = 0;
 
 
