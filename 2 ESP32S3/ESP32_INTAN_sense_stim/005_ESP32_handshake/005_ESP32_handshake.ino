@@ -36,7 +36,9 @@ bool ACK_param = false;
 
 /* SPI Pins */
 const int STIM_INDICATOR_PIN = 9;
-uint8_t HANDSHAKE_PIN = 5;
+uint8_t HANDSHAKE_READY_PIN = 5;
+uint8_t HANDSHAKE_ACK_PIN = 6;
+uint8_t HANDSHAKE_SEND_PIN = 14;
 const int NEW_PARAM_PIN = 11;
 const int ACK_PARAM_PIN = 12;
 const int ESP32_CONNECTED_PIN = 13;
@@ -45,11 +47,11 @@ uint8_t MOSI_PIN_PARAM = 18;
 uint8_t SCLK_PIN_PARAM = 16;
 uint8_t CS_ESP32_PIN_PARAM = 15;
 
-static constexpr size_t buf_size = 6;
+static constexpr size_t buf_size = 12;
 uint8_t tx_buf_ECG[buf_size] = { 0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA };
 uint8_t rx_buf[buf_size] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 uint32_t spi_data_index = 0;
-static constexpr size_t spi_data_array_size_const = 24;
+static constexpr size_t spi_data_array_size_const = 240;
 uint8_t spi_data_array[spi_data_array_size_const] = { 0 };
 
 
@@ -177,18 +179,36 @@ void STIM_INDICATOR_SETUP(){
 }
 
 void HANDSHAKE_SETUP(){
-  pinMode(HANDSHAKE_PIN, OUTPUT);
-  Serial.println("Inicializado pin HANDSHAKE_PIN");
+  pinMode(HANDSHAKE_READY_PIN, OUTPUT);
+  pinMode(HANDSHAKE_ACK_PIN, INPUT);
+  pinMode(HANDSHAKE_SEND_PIN, INPUT);
+
+  Serial.println("Inicializado pin HANDSHAKE_READY_PIN");
 }
 
-void HANDSHAKE_HIGH(){
-  digitalWrite(HANDSHAKE_PIN, HIGH);
-  Serial.println("\n HW high value");
+void HANDSHAKE_READY_HIGH(){
+  digitalWrite(HANDSHAKE_READY_PIN, HIGH);
+  // Serial.println("\n READY high value");
 }
 
-void HANDSHAKE_LOW(){
-  digitalWrite(HANDSHAKE_PIN, LOW);
-  Serial.println("\n HS low value");
+void HANDSHAKE_READY_LOW(){
+  digitalWrite(HANDSHAKE_READY_PIN, LOW);
+  // Serial.println("\n READY low value");
+}
+
+
+
+bool HANDSHAKE_ACK_VALUE(){
+  bool handshake_ack_value = digitalRead(HANDSHAKE_ACK_PIN);
+  Serial.printf("ACK value: %d\n", handshake_ack_value);
+  return handshake_ack_value;
+}
+
+bool HANDSHAKE_SEND_VALUE(){
+  bool send_value = digitalRead(HANDSHAKE_SEND_PIN);
+  // Serial.printf("SEND value: %d\n", send_value);
+
+  return send_value;
 }
 
 
@@ -205,7 +225,6 @@ BLECharacteristic *pCharacteristicRX;
 
 class MyCallbacks : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic *pCharacteristic) override {
-    HANDSHAKE_LOW();
     String value = pCharacteristic->getValue();
     if (value.length() == 0) return;
 
@@ -305,15 +324,14 @@ void BLE_SETUP() {
 
 
 void STIM_INDICATOR() {
-  HANDSHAKE_LOW();
   if (digitalRead(STIM_INDICATOR_PIN)) {
     if (previous_state == STIM_OFF) {
       previous_state = STIM_ON;
-      Serial.printf("Stimulation change: ON\n");
+      // Serial.printf("Stimulation change: ON\n");
 
       // 🔹 Enviar mensaje BLE indicando ON
       if (pCharacteristicTX != nullptr) {
-        Serial.printf("STIM ON packet sent");
+        // Serial.printf("STIM ON packet sent");
         const char *msg = "STIM_ON";
         pCharacteristicTX->setValue((uint8_t*)msg, strlen(msg));
         pCharacteristicTX->notify();
@@ -322,10 +340,10 @@ void STIM_INDICATOR() {
   } else {
     if (previous_state == STIM_ON) {
       previous_state = STIM_OFF;
-      Serial.printf("Stimulation change: OFF\n");
+      // Serial.printf("Stimulation change: OFF\n");
       // 🔹 Enviar mensaje BLE indicando OFF
       if (pCharacteristicTX != nullptr) {
-        Serial.printf("STIM OFF packet sent");
+        // Serial.printf("STIM OFF packet sent");
         const char *msg = "STIM_OFF";
         pCharacteristicTX->setValue((uint8_t*)msg, strlen(msg));
         pCharacteristicTX->notify();
@@ -348,7 +366,7 @@ void setup() {
   SPI_SETUP();
   BLE_SETUP();
   HANDSHAKE_SETUP();
-  HANDSHAKE_LOW();
+  HANDSHAKE_READY_HIGH();
   initializeBuffers(tx_buf_ECG, rx_buf, buf_size);
 
 }
@@ -358,9 +376,8 @@ void loop() {
   STIM_INDICATOR();
   switch(general_state){
     case REENVIO: // Reenvío por BLE de lo obtenido por SPI
-    HANDSHAKE_LOW();
       if(!printed){
-        Serial.println("Estado 1: Evío del ECG por SPI.");
+        Serial.println("\n Estado 1: Evío del ECG por SPI.");
         printed = true;
       }
       if (RX_BT == 1){
@@ -371,46 +388,46 @@ void loop() {
       }else{
 
         // ---- SPI ----
-        HANDSHAKE_HIGH();
 
         initializeBuffers(tx_buf_ECG, rx_buf, buf_size);
-        uint32_t received_bytes_ECG = slave.transfer(tx_buf_ECG, rx_buf, buf_size);
-        // Serial.printf("%d", received_bytes_ECG);
-        digitalWrite(HANDSHAKE_PIN, LOW);
-        // HANDSHAKE_LOW();
         
+        //check send value with timeout
+        unsigned long t0 = millis();
+        while (HANDSHAKE_SEND_VALUE()) {
+          if (millis() - t0 > 5) {   // 1 ms
+            // Serial.println("Timeout SEND");
+            HANDSHAKE_READY_HIGH();
+            return;
+          }
+        }
 
+        HANDSHAKE_READY_LOW();
+        uint32_t received_bytes_ECG = slave.transfer(tx_buf_ECG, rx_buf, buf_size);
+        
         for (uint8_t i = 0; i < buf_size; i++) {
           spi_data_array[spi_data_index++] = rx_buf[i];
         }
-        
-
 
         // Serial.printf("%d \n", spi_data_index);
         if (spi_data_index >= spi_data_array_size_const) {
-          delayMicroseconds(1);
-          
-          
-        // Serial.print("\nDatos enviados por BLE: \n");
-        // for (int ll = 0; ll < spi_data_array_size_const; ll++) 
-        //     Serial.printf("%d ", spi_data_array[ll]);
-        // }
-
-          
+          delayMicroseconds(1);        
           if (pCharacteristicTX != nullptr) {
             pCharacteristicTX->setValue(spi_data_array, spi_data_array_size_const);
             pCharacteristicTX->notify();
           }
+          // Serial.print("\n SENT VALUES BLE");
+          HANDSHAKE_READY_HIGH();
           spi_data_index = 0;
         }
+
+        HANDSHAKE_READY_HIGH();
       }
       break;
 
     case NUEVO_SPI_ENCOLADO: // Nuevo SPI encolado
-    HANDSHAKE_LOW();
 
       if(!printed){
-        Serial.println("Estado 2: Encolar nuevo SPI.");
+        Serial.println("\n Estado 2: Encolar nuevo SPI.");
         printed = true;
       }
 
@@ -510,10 +527,9 @@ void loop() {
       break;
 
     case ESPERA_ACK_ON: // Espera al ACK
-    HANDSHAKE_LOW();
 
       if(!printed){
-        Serial.println("Estado 3: espera al ACK.");
+        Serial.println("\n Estado 3: espera al ACK.");
         printed = true;
       }
       
@@ -527,9 +543,8 @@ void loop() {
       break;
     
     case ESPERA_FIN_ACK: // Espera al fin del ACK
-    HANDSHAKE_LOW();
       if(!printed){
-        Serial.println("Estado 4: espera al fin del ACK.");
+        Serial.println("\n Estado 4: espera al fin del ACK.");
         printed = true;
       }
 
@@ -545,9 +560,8 @@ void loop() {
       break;
 
     case RESET:
-    HANDSHAKE_LOW();
       if(!printed){
-        Serial.println("Estado 5: reset");
+        Serial.println("\n Estado 5: reset");
         printed = true;
       }
 

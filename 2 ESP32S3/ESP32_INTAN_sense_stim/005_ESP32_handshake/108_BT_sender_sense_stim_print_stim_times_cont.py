@@ -121,7 +121,7 @@ def notification_handler(sender, data):
     try:
         values = list(data)
         received_raw_buffer.extend(values)
-        print(values)
+        # print(values)
 
         i = 0
         while i <= len(received_raw_buffer) - 3:
@@ -132,8 +132,8 @@ def notification_handler(sender, data):
                 high_word = received_raw_buffer[i+1]
                 low_word  = received_raw_buffer[i+2]
                 combined_value = (high_word << 8) | low_word
-                # real_value = 0.195 * (combined_value - 32768)
-                real_value = combined_value
+                real_value = 0.195 * (combined_value - 32768)
+                # real_value = combined_value
                 timestamp_us = time.time_ns() // 1000
                 processed_ch1.append((real_value, timestamp_us))
                 sample_counter_ch1 += 1
@@ -145,8 +145,8 @@ def notification_handler(sender, data):
                 high_word = received_raw_buffer[i+1]
                 low_word  = received_raw_buffer[i+2]
                 combined_value = (high_word << 8) | low_word
-                # real_value = 0.195 * (combined_value - 32768)
-                real_value = combined_value
+                real_value = 0.195 * (combined_value - 32768)
+                # real_value = combined_value
                 timestamp_us = time.time_ns() // 1000
                 processed_ch2.append((real_value, timestamp_us))
                 sample_counter_ch2 += 1
@@ -283,7 +283,7 @@ def show_realtime_graph():
     ax.set_title("Real time signal")
     ax.set_xlabel("Index")
     ax.set_ylabel("uV")
-    # ax.set_ylim(-7000, 7000)
+    ax.set_ylim(-7000, 7000)
     ax.grid(True)
     ax.legend()
 

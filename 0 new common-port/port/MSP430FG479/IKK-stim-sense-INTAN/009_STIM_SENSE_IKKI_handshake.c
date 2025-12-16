@@ -36,7 +36,9 @@
 //                |  57         P1.1|<- ACK_PARAM  ---------------------------> - GPIO 12: D12
 //                |  51         P1.5|-> ESP32 connected ----------------------> - GPIO 13: D13
 //                |  35         P5.3|-> STIMULATION ENABLED ------------------> - GPIO 9: D9
-//                |  36         P5.4|-> HAND SHAKE  --------------------------> - GPIO 5: D5
+//                |  28         P5.1|-> HAND SHAKE SEND ----------------------> - GPIO 4: GPIO14
+//                |  27         P5.0|-> HAND SHAKE READY ---------------------> - GPIO 5: D5
+//                |  34         P5.2|-> HAND SHAKE ACK -----------------------> - GPIO 6: D6
 //                |                 |-----------------------------------------> - GND
 //                |                 |
 //                |  ---  SPI  ---  |
@@ -155,6 +157,8 @@ char amplifier_cutoff_frequency_A_B;
 uint8_t debug_send[6];
 uint8_t debug_send_counter = 0;
 
+uint32_t timeout;
+
 uint8_t contador = 0;
 uint8_t contador2 = 0;
 uint8_t useless_variable;
@@ -165,11 +169,15 @@ typedef union {
 } float_bytes_union;
 
 
-uint8_t received_channel_value_1_CH1;
-uint8_t received_channel_value_2_CH1;
+uint8_t received_channel_value_11_CH1;
+uint8_t received_channel_value_12_CH1;
+uint8_t received_channel_value_21_CH1;
+uint8_t received_channel_value_22_CH1;
 
-uint8_t received_channel_value_1_CH2;
-uint8_t received_channel_value_2_CH2;
+uint8_t received_channel_value_11_CH2;
+uint8_t received_channel_value_12_CH2;
+uint8_t received_channel_value_21_CH2;
+uint8_t received_channel_value_22_CH2;
 
 //Timer value configuration divider
 uint32_t divider_value = 0x029A;
@@ -690,119 +698,119 @@ void receive_parameters_ESP32(INTAN_config_struct* INTAN_config){
 
 }
 
-void update_stim_parameters(){
+// void update_stim_parameters(){
 
-  if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
-    ON_pin();
-    switch (state_stimulation) {
-      case STIM:
-        if(timer_flag_stim_rest >= stim_rest_time){
-          state_stimulation = REST;
-          timer_flag_stim_rest = 0;
-          stim_rest_time = INTAN_config.resting_time;
-          number_of_stimulations_done++;
-          INTAN_programmed = false;
+//   if(number_of_stimulations_done < INTAN_config.number_of_stimulations){ // si el número de estimulaciones hechas es menor al que se quiere hacer
+//     ON_pin();
+//     switch (state_stimulation) {
+//       case STIM:
+//         if(timer_flag_stim_rest >= stim_rest_time){
+//           state_stimulation = REST;
+//           timer_flag_stim_rest = 0;
+//           stim_rest_time = INTAN_config.resting_time;
+//           number_of_stimulations_done++;
+//           INTAN_programmed = false;
 
-          break;
-        }
-          switch (state_stimulation_ON_OFF) {
-            case ON_P:
-              if(timer_flag_on_off >= stim_on_off_time){
-                state_stimulation_ON_OFF = OFF_P;
-                timer_flag_on_off = 0;
-                stim_on_off_time = INTAN_config.stimulation_off_time;
-                INTAN_programmed = false;
-                break;
-              }          
-              if(!INTAN_programmed){
-                INTAN_config.stimulation_on[0] = 1;
-                INTAN_config.stimulation_pol[0] = 'P';
-                ON_INTAN_FASTER_FASTER(&INTAN_config, stim_channel);
-                // ON_INTAN_FASTER(&INTAN_config, channel);
-                INTAN_programmed = true;
-              }
+//           break;
+//         }
+//           switch (state_stimulation_ON_OFF) {
+//             case ON_P:
+//               if(timer_flag_on_off >= stim_on_off_time){
+//                 state_stimulation_ON_OFF = OFF_P;
+//                 timer_flag_on_off = 0;
+//                 stim_on_off_time = INTAN_config.stimulation_off_time;
+//                 INTAN_programmed = false;
+//                 break;
+//               }          
+//               if(!INTAN_programmed){
+//                 INTAN_config.stimulation_on[0] = 1;
+//                 INTAN_config.stimulation_pol[0] = 'P';
+//                 ON_INTAN_FASTER_FASTER(&INTAN_config, stim_channel);
+//                 // ON_INTAN_FASTER(&INTAN_config, channel);
+//                 INTAN_programmed = true;
+//               }
               
-              break;
+//               break;
 
-            case OFF_P:
-              if(timer_flag_on_off >= stim_on_off_time){
-                if (INTAN_config.bipolar){
-                  state_stimulation_ON_OFF = ON_N;
-                }else{
-                  state_stimulation_ON_OFF = ON_P;
-                }
-                timer_flag_on_off = 0;
-                stim_on_off_time = INTAN_config.stimulation_on_time;
-                INTAN_programmed = false;
-                break;
-              }          
-              if(!INTAN_programmed){
-                OFF_INTAN_FASTER(&INTAN_config);                          
-                // OFF_INTAN_FASTER(&INTAN_config);                          
-                INTAN_programmed = true;
-              }
+//             case OFF_P:
+//               if(timer_flag_on_off >= stim_on_off_time){
+//                 if (INTAN_config.bipolar){
+//                   state_stimulation_ON_OFF = ON_N;
+//                 }else{
+//                   state_stimulation_ON_OFF = ON_P;
+//                 }
+//                 timer_flag_on_off = 0;
+//                 stim_on_off_time = INTAN_config.stimulation_on_time;
+//                 INTAN_programmed = false;
+//                 break;
+//               }          
+//               if(!INTAN_programmed){
+//                 OFF_INTAN_FASTER(&INTAN_config);                          
+//                 // OFF_INTAN_FASTER(&INTAN_config);                          
+//                 INTAN_programmed = true;
+//               }
               
               
-              break;
+//               break;
 
-            case ON_N:
-              if(timer_flag_on_off >= stim_on_off_time){
-                state_stimulation_ON_OFF = OFF_N;
-                timer_flag_on_off = 0;
-                stim_on_off_time = INTAN_config.stimulation_off_time;
-                INTAN_programmed = false;
-                break;
-              }
-              if(!INTAN_programmed){
-                INTAN_config.stimulation_on[0] = 1;
-                INTAN_config.stimulation_pol[0] = 'N';
-                ON_INTAN_FASTER_FASTER(&INTAN_config, stim_channel);
-                // ON_INTAN(&INTAN_config);
-                INTAN_programmed = true;
-              }
+//             case ON_N:
+//               if(timer_flag_on_off >= stim_on_off_time){
+//                 state_stimulation_ON_OFF = OFF_N;
+//                 timer_flag_on_off = 0;
+//                 stim_on_off_time = INTAN_config.stimulation_off_time;
+//                 INTAN_programmed = false;
+//                 break;
+//               }
+//               if(!INTAN_programmed){
+//                 INTAN_config.stimulation_on[0] = 1;
+//                 INTAN_config.stimulation_pol[0] = 'N';
+//                 ON_INTAN_FASTER_FASTER(&INTAN_config, stim_channel);
+//                 // ON_INTAN(&INTAN_config);
+//                 INTAN_programmed = true;
+//               }
 
               
-              break;
+//               break;
 
-            case  OFF_N:
-              if(timer_flag_on_off >= stim_on_off_time){
-                state_stimulation_ON_OFF = ON_P;
-                timer_flag_on_off = 0;
-                stim_on_off_time = INTAN_config.stimulation_on_time;
-                INTAN_programmed = false;
-                break;
-              }
-              if(!INTAN_programmed){
-                OFF_INTAN_FASTER(&INTAN_config);
-                // OFF_INTAN_FASTER(&INTAN_config);
-                INTAN_programmed = true;
-              }
-              break;
+//             case  OFF_N:
+//               if(timer_flag_on_off >= stim_on_off_time){
+//                 state_stimulation_ON_OFF = ON_P;
+//                 timer_flag_on_off = 0;
+//                 stim_on_off_time = INTAN_config.stimulation_on_time;
+//                 INTAN_programmed = false;
+//                 break;
+//               }
+//               if(!INTAN_programmed){
+//                 OFF_INTAN_FASTER(&INTAN_config);
+//                 // OFF_INTAN_FASTER(&INTAN_config);
+//                 INTAN_programmed = true;
+//               }
+//               break;
 
-          }
-        break;
+//           }
+//         break;
 
-      case REST:
-          if(timer_flag_stim_rest >= stim_rest_time){
-            state_stimulation = STIM;
-            timer_flag_stim_rest = 0;
-            stim_rest_time = INTAN_config.stimulation_time;
-            state_stimulation_ON_OFF = ON_P;
-            INTAN_programmed = false;
-            break;
-          }
-          if(!INTAN_programmed){
-            OFF_INTAN_FASTER(&INTAN_config);
-            INTAN_programmed = true;
-          }
-        break;
+//       case REST:
+//           if(timer_flag_stim_rest >= stim_rest_time){
+//             state_stimulation = STIM;
+//             timer_flag_stim_rest = 0;
+//             stim_rest_time = INTAN_config.stimulation_time;
+//             state_stimulation_ON_OFF = ON_P;
+//             INTAN_programmed = false;
+//             break;
+//           }
+//           if(!INTAN_programmed){
+//             OFF_INTAN_FASTER(&INTAN_config);
+//             INTAN_programmed = true;
+//           }
+//         break;
     
-    }
-  }else{
-    next_stim = button_pressed();
-    OFF_pin();
-  }
-}
+//     }
+//   }else{
+//     next_stim = button_pressed();
+//     OFF_pin();
+//   }
+// }
 
 void config_CLK(CLK_config_struct* CLK_config){
   // Modo de operación
@@ -918,7 +926,12 @@ int main(void)
   stim_indicator_setup();
 
   //************************** SPI handshake indicator setup ************************** 
-  HSHK_setup();
+  HSHK_READY_setup();
+  HSHK_ACK_setup();
+  HSHK_ACK_high();
+  HSHK_SEND_setup();
+  HSHK_SEND_high();
+
 
 
   if(esp32_connected){
@@ -960,6 +973,7 @@ int main(void)
   stim_en_OFF();
   initialize_INTAN(&INTAN_config);
   configure_INTAN(&INTAN_config);
+  
 
   call_configuration_functions(&INTAN_config);
 
@@ -979,89 +993,159 @@ int main(void)
           */
           convert_channel(&INTAN_config, channel_1);
           send_SPI_commands_faster(&INTAN_config);
-          received_channel_value_1_CH1 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
-          received_channel_value_2_CH1 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
+          received_channel_value_11_CH1 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
+          received_channel_value_21_CH1 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
           // received_channel_value_3 = (INTAN_config.obtained_RX[0] >> 8)  & 0xFF;
           // received_channel_value_4 = INTAN_config.obtained_RX[0] & 0xFF;
           convert_channel(&INTAN_config, channel_2);
           send_SPI_commands_faster(&INTAN_config);
-          received_channel_value_1_CH2 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
-          received_channel_value_2_CH2 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
+          received_channel_value_11_CH2 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
+          received_channel_value_21_CH2 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
+
+          convert_channel(&INTAN_config, channel_1);
+          send_SPI_commands_faster(&INTAN_config);
+          received_channel_value_12_CH1 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
+          received_channel_value_22_CH1 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
+          // received_channel_value_3 = (INTAN_config.obtained_RX[0] >> 8)  & 0xFF;
+          // received_channel_value_4 = INTAN_config.obtained_RX[0] & 0xFF;
+          convert_channel(&INTAN_config, channel_2);
+          send_SPI_commands_faster(&INTAN_config);
+          received_channel_value_12_CH2 = (INTAN_config.obtained_RX[0] >> 24) & 0xFF;
+          received_channel_value_22_CH2 = (INTAN_config.obtained_RX[0] >> 16) & 0xFF;
           
           /*
             Resend to the ESP32 the received values from INTAN 
           */
 
+          // HS_value = HSHK_READY_value(); 
+          // while(!HS_value){
+          //   HS_value = HSHK_READY_value(); 
+          // };
 
-
-          // __delay_cycles(CLK_50000_CYCLES);
-
-          // HS_value = HSHK_value();
-          HS_value = !(P5IN & BIT4);
-          while(!HS_value){
-            // HS_value = HSHK_value();
-            HS_value = !(P5IN & BIT4);
-          }
-         
+          timeout = 10000;
+          while(!HSHK_READY_value() && timeout--);
           
+
+
+          // __delay_cycles(CLK_1000_CYCLES);
+
+          HSHK_SEND_low();
+          // __delay_cycles(CLK_5000_CYCLES);
+
+
+          timeout = 10000;
+          while(HSHK_READY_value() && timeout--);
+         
+
+          // HS_value = HSHK_READY_value(); 
+          // while(HS_value){
+          //   HS_value = HSHK_READY_value(); 
+          // };
+
+          // __delay_cycles(CLK_1000_CYCLES);
+
           // // It is always sending data to the ESP32, if the timing pin is enabled then, the incorporated led will switch
           OFF_CS_ESP_PARAM_pin();
 
-          // __delay_cycles(CLK_50000_CYCLES);
+          __delay_cycles(CLK_5_CYCLES);
 
           while (!(IFG2 & UCA0TXIFG));              
           UCA0TXBUF = 0x31;
-          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          while (!(IFG2 & UCA0RXIFG)); 
           useless_variable=UCA0RXBUF;
           
-          // __delay_cycles(CLK_5_CYCLES);
+          __delay_cycles(CLK_5_CYCLES);
           while (!(IFG2 & UCA0TXIFG));      
-          UCA0TXBUF = contador++;
-          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          // UCA0TXBUF = contador++;
+          UCA0TXBUF = received_channel_value_11_CH1;
+          while (!(IFG2 & UCA0RXIFG)); 
           useless_variable=UCA0RXBUF;
-          // UCA0TXBUF = received_channel_value_1_CH1;
 
 
-          // __delay_cycles(CLK_5_CYCLES);
-          while (!(IFG2 & UCA0TXIFG));              
-          UCA0TXBUF = contador++;
-          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
-          useless_variable=UCA0RXBUF;
-          // UCA0TXBUF = received_channel_value_2_CH1;
-
-          // __delay_cycles(CLK_5_CYCLES);
+          __delay_cycles(CLK_5_CYCLES);
           while (!(IFG2 & UCA0TXIFG));              
           // UCA0TXBUF = contador++;
+          UCA0TXBUF = received_channel_value_21_CH1;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+
+          __delay_cycles(CLK_5_CYCLES);
+          while (!(IFG2 & UCA0TXIFG));              
           UCA0TXBUF = 0x71;
-          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          while (!(IFG2 & UCA0RXIFG)); 
           useless_variable=UCA0RXBUF;
 
-          // __delay_cycles(CLK_5_CYCLES);
+          __delay_cycles(CLK_5_CYCLES);
           while (!(IFG2 & UCA0TXIFG));              
-          UCA0TXBUF = contador2++;
-          // UCA0TXBUF = received_channel_value_1_CH2;
-          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          // UCA0TXBUF = contador2++;
+          UCA0TXBUF = received_channel_value_11_CH2;
+          while (!(IFG2 & UCA0RXIFG)); 
           useless_variable=UCA0RXBUF;
 
-          // __delay_cycles(CLK_5_CYCLES);
+          __delay_cycles(CLK_5_CYCLES);
           while (!(IFG2 & UCA0TXIFG));              
-          UCA0TXBUF = contador2++;
-          // UCA0TXBUF = received_channel_value_2_CH2;
-          while (!(IFG2 & UCA0RXIFG));  // espera que RXBUF tenga el dato recibido
+          // UCA0TXBUF = contador2++;
+          UCA0TXBUF = received_channel_value_21_CH2;
+          while (!(IFG2 & UCA0RXIFG)); 
           useless_variable=UCA0RXBUF;
-          // __delay_cycles(CLK_5_CYCLES);
+
+          __delay_cycles(CLK_5_CYCLES);
+
+          while (!(IFG2 & UCA0TXIFG));              
+          UCA0TXBUF = 0x31;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+          
+          __delay_cycles(CLK_5_CYCLES);
+          while (!(IFG2 & UCA0TXIFG));      
+          // UCA0TXBUF = contador++;
+          UCA0TXBUF = received_channel_value_12_CH1;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+
+
+          __delay_cycles(CLK_5_CYCLES);
+          while (!(IFG2 & UCA0TXIFG));              
+          // UCA0TXBUF = contador++;
+          UCA0TXBUF = received_channel_value_22_CH1;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+
+          __delay_cycles(CLK_5_CYCLES);
+          while (!(IFG2 & UCA0TXIFG));              
+          UCA0TXBUF = 0x71;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+
+          __delay_cycles(CLK_5_CYCLES);
+          while (!(IFG2 & UCA0TXIFG));              
+          // UCA0TXBUF = contador2++;
+          UCA0TXBUF = received_channel_value_12_CH2;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+
+          __delay_cycles(CLK_5_CYCLES);
+          while (!(IFG2 & UCA0TXIFG));              
+          // UCA0TXBUF = contador2++;
+          UCA0TXBUF = received_channel_value_22_CH2;
+          while (!(IFG2 & UCA0RXIFG)); 
+          useless_variable=UCA0RXBUF;
+
+          __delay_cycles(CLK_15_CYCLES);
 
           ON_CS_ESP_PARAM_pin();
-          __delay_cycles(CLK_25_CYCLES);
-                    
 
-          if(contador >= 130){
-            debug_send_counter = 0;
-            contador = 0;
-            contador2 = 0;
-          }
+          HSHK_SEND_high();
 
-          
+          // HS_value = HSHK_READY_value(); 
+          // while(HS_value){
+          //   HS_value = HSHK_READY_value(); 
+          // };
+          // timeout = 10000;
+          // while(HSHK_READY_value() && timeout--);
+
+          __delay_cycles(CLK_50_CYCLES);
+         
           next_stim = button_pressed();
           if(next_stim){
             // if(!previous_stim){

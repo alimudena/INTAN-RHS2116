@@ -155,8 +155,8 @@ void OFF_ESP32_LED(){
     P4OUT &= ~0x01;                          // Off   
 }
 
-void ON_ESP32_LED(){                               // On 
-    P4OUT |= 0x01;
+void ON_ESP32_LED(){ 
+    P4OUT |= 0x01;                           // On 
 }
 
 
@@ -164,16 +164,40 @@ void ON_ESP32_LED(){                               // On
 /*HANDSHAKE for ESP32 SPI transmissions*/
 //*****************************************************************************
 
-void HSHK_setup(){
-    P5DIR &= ~BIT4;                            // Set P5.4 as input
+//Ready pin
+void HSHK_READY_setup(){
+    P5DIR &= ~BIT0;                            // Set P5.0 as input
 }
 
-bool HSHK_value(){
-    return !(P5IN & BIT4);
+bool HSHK_READY_value(){
+    return (P5IN & BIT0); 
 }
 
+//ACK pin
+void HSHK_ACK_setup(){
+    P5DIR |= BIT2;                            // Set P5.2 to output direction
+}
 
+void HSHK_ACK_high(){
+    P5OUT |= 0x04;                           // On 
+}
 
+void HSHK_ACK_low(){
+    P5OUT &= ~0x04;                          // Off   
+}
+
+//SEND pin
+void HSHK_SEND_setup(){
+    P5DIR |= BIT1;                            // Set P5.1 to output direction
+}
+
+void HSHK_SEND_high(){
+    P5OUT |= 0x02;                           // On 
+}
+
+void HSHK_SEND_low(){
+    P5OUT &= ~0x02;                          // Off   
+}
 
 
 //*****************************************************************************
