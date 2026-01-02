@@ -112,7 +112,7 @@ uint8_t high_byte_step_DAC = 0;
 uint8_t low_byte_step_DAC = 0;
 uint16_t step_DAC = 0;
 
-
+uint8_t channel = 0;
 
 uint32_t divider_value = 0x029A;
 
@@ -310,7 +310,7 @@ void update_stim_parameters(){
               if(!INTAN_programmed){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'P';
-                ON_INTAN_FASTER(&INTAN_confi, channel);
+                ON_INTAN_FASTER_FASTER(&INTAN_config, channel);
                 // ON_INTAN_FASTER(&INTAN_config, channel);
                 INTAN_programmed = true;
               }
@@ -345,7 +345,7 @@ void update_stim_parameters(){
               if(!INTAN_programmed){
                 INTAN_config.stimulation_on[0] = 1;
                 INTAN_config.stimulation_pol[0] = 'N';
-                ON_INTAN_FASTER(&INTAN_config, channel);
+                ON_INTAN_FASTER_FASTER(&INTAN_config, channel);
                 // ON_INTAN(&INTAN_config);
                 INTAN_programmed = true;
               }
@@ -614,7 +614,7 @@ if(esp32_connected){
                         if(!INTAN_programmed){
                           INTAN_config.stimulation_on[0] = 1;
                           INTAN_config.stimulation_pol[0] = 'P';
-                          ON_INTAN_FASTER(&INTAN_config, channel);
+                          ON_INTAN_FASTER_FASTER(&INTAN_config, channel);
                           // ON_INTAN_FASTER(&INTAN_config, channel);
                           INTAN_programmed = true;
                         }
@@ -649,7 +649,7 @@ if(esp32_connected){
                         if(!INTAN_programmed){
                           INTAN_config.stimulation_on[0] = 1;
                           INTAN_config.stimulation_pol[0] = 'N';
-                          ON_INTAN_FASTER(&INTAN_config, channel);
+                          ON_INTAN_FASTER_FASTER(&INTAN_config, channel);
                           // ON_INTAN(&INTAN_config, channel);
                           INTAN_programmed = true;
                         }

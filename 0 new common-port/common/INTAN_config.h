@@ -143,6 +143,7 @@ typedef struct{
     bool single_shot;
 
     bool bipolar;
+    uint8_t number_of_pulses;
     
 
     } INTAN_config_struct;

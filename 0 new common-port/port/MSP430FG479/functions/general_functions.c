@@ -225,16 +225,12 @@ void stim_indicator_setup(){
 
 }
 
-void stim_indicator_ON(){
-    P5OUT |= 0x08;
-
-
+void stim_indicator_ON(){ // Off pin for indicating the stimulation is ON
+    P5OUT &= ~0x08;                          // Off pin
 }
 
-void stim_indicator_OFF(){
-    P5OUT &= ~0x08;                          // Off   
-
-
+void stim_indicator_OFF(){ // On pin for indicating the stimulation is OFF
+    P5OUT |= 0x08;                          // ON pin
 }
 
 //*****************************************************************************

@@ -376,7 +376,7 @@ void convert_N_channels_faster(INTAN_config_struct* INTAN_config){
     Channel = INTAN_config->initial_channel_to_convert;
     if (Channel >= 16){
         perror("Error: Too high Channel value.");
-        while(1);
+        // while(1);
     }
     for (i = initial_channel; i<number_channels+initial_channel; i++){
         convert_channel(INTAN_config, i);

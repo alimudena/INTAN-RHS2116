@@ -128,8 +128,8 @@ void call_configuration_functions(INTAN_config_struct* INTAN_config){
                 CONSTANT CURRENT STIMULATOR
         */
         enable_U_flag(INTAN_config);
-        int i;
-        for (i = NUM_CHANNELS-1; i>=0; i--){
+        uint8_t i;
+        for (i = NUM_CHANNELS; i>=1; i--){
                 stim_current_channel_configuration(INTAN_config, i, INTAN_config->negative_current_trim[i],INTAN_config->negative_current_magnitude[i], INTAN_config->positive_current_trim[i], INTAN_config->positive_current_magnitude[i]);
         }
 
@@ -374,8 +374,8 @@ void call_initialization_procedure_example_test_INTAN_functions(INTAN_config_str
         send_SPI_commands(INTAN_config);
 
         enable_U_flag(INTAN_config);
-        int i;
-        for (i = NUM_CHANNELS-1; i>=0; i--){
+        uint8_t i;
+        for (i = NUM_CHANNELS; i>=1; i--){
                 stim_current_channel_configuration(INTAN_config, i, INTAN_config->negative_current_trim[i],INTAN_config->negative_current_magnitude[i], INTAN_config->positive_current_trim[i], INTAN_config->positive_current_magnitude[i]);
         }
         disable_U_flag(INTAN_config);
