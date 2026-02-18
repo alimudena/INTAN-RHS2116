@@ -11,8 +11,8 @@ PEV07.id = "PEV07";
     % Experiment 1
     EXPERIMENT = 1;
     PEV07.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07_S1B__ECG_timeline_20260129_144435.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07_S1B__STIM_EVENTS_20260129_144435.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S1B__ECG_timeline_20260129_144435.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S1B__STIM_EVENTS_20260129_144435.csv");
     
     [PEV07.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV07.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -32,8 +32,8 @@ PEV07.id = "PEV07";
     % Experiment 2
     EXPERIMENT = 2;
     PEV07.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07_S2_ECG_timeline_20260129_144648.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07_S2_STIM_EVENTS_20260129_144648.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S2_ECG_timeline_20260129_144648.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S2_STIM_EVENTS_20260129_144648.csv");
     
     [PEV07.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV07.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -53,8 +53,8 @@ PEV07.id = "PEV07";
     % Experiment 3
     EXPERIMENT = 3;
     PEV07.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07_S3_ECG_timeline_20260129_144844.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07_S3_STIM_EVENTS_20260129_144844.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S3_ECG_timeline_20260129_144844.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S3_STIM_EVENTS_20260129_144844.csv");
     
     [PEV07.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV07.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -74,8 +74,8 @@ PEV07.id = "PEV07";
     % Experiment 4
     EXPERIMENT = 4;
     PEV07.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(2);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07_S4_ECG_timeline_20260129_145104.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07_S4_STIM_EVENTS_20260129_145104.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S4_ECG_timeline_20260129_145104.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_S4_STIM_EVENTS_20260129_145104.csv");
     
     [PEV07.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV07.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -95,8 +95,8 @@ PEV07.id = "PEV07";
     % Experiment 5
     EXPERIMENT = 5;
     PEV07.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07_V1_ECG_timeline_20260129_143315.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07_V1_STIM_EVENTS_20260129_143315.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_V1_ECG_timeline_20260129_143315.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_V1_STIM_EVENTS_20260129_143315.csv");
     
     [PEV07.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV07.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -116,8 +116,8 @@ PEV07.id = "PEV07";
     % Experiment 6
     EXPERIMENT = 6;
     PEV07.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07_C1_ECG_timeline_20260129_143706.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07_C1_STIM_EVENTS_20260129_143706.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_C1_ECG_timeline_20260129_143706.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV07\PEV07_C1_STIM_EVENTS_20260129_143706.csv");
     
     [PEV07.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV07.DAY(DAY).Experiment(EXPERIMENT).CH2, ...

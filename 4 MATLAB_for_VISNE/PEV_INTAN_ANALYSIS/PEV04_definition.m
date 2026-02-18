@@ -9,8 +9,8 @@ PEV04.id = "PEV04";
     % Experiment 1
     EXPERIMENT = 1;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D1\P2_PEV04_ECG_timeline_20260121_114937.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D1\P2_PEV04_STIM_EVENTS_20260121_114937.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D1\PEV04\P2_PEV04_ECG_timeline_20260121_114937.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D1\PEV04\P2_PEV04_STIM_EVENTS_20260121_114937.csv");
     
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -30,8 +30,8 @@ PEV04.id = "PEV04";
     % Experiment 2
     EXPERIMENT = 2;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D1\P3_PEV04_ECG_timeline_20260121_115658.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D1\P3_PEV04_STIM_EVENTS_20260121_115658.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D1\PEV04\P3_PEV04_ECG_timeline_20260121_115658.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D1\PEV04\P3_PEV04_STIM_EVENTS_20260121_115658.csv");
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).stim_ON, ...
@@ -50,8 +50,8 @@ PEV04.id = "PEV04";
     % Experiment 3
     EXPERIMENT = 3;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D1\P4_PEV04_ECG_timeline_20260121_120405.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D1\P4_PEV04_STIM_EVENTS_20260121_120405.csv");    
+    datos_bio = readtable("..\Verificacion_stim_sense\D1\PEV04\P4_PEV04_ECG_timeline_20260121_120405.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D1\PEV04\P4_PEV04_STIM_EVENTS_20260121_120405.csv");    
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).stim_ON, ...
@@ -74,8 +74,8 @@ PEV04.DAY(DAY).Date = Experimental_days(2);
     % Experiment 1
     EXPERIMENT = 1;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04_S1_ECG_timeline_20260129_111942.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04_S1_STIM_EVENTS_20260129_111942.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_S1_ECG_timeline_20260129_111942.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_S1_STIM_EVENTS_20260129_111942.csv");
     
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -95,8 +95,8 @@ PEV04.DAY(DAY).Date = Experimental_days(2);
     % Experiment 2
     EXPERIMENT = 2;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04_S2_ECG_timeline_20260129_112406.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04_S2_STIM_EVENTS_20260129_112406.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_S2_ECG_timeline_20260129_112406.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_S2_STIM_EVENTS_20260129_112406.csv");
     
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -116,8 +116,8 @@ PEV04.DAY(DAY).Date = Experimental_days(2);
     % Experiment 3
     EXPERIMENT = 3;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(1);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04_S3_ECG_timeline_20260129_112833.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04_S3_STIM_EVENTS_20260129_112833.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_S3_ECG_timeline_20260129_112833.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_S3_STIM_EVENTS_20260129_112833.csv");
     
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -137,8 +137,8 @@ PEV04.DAY(DAY).Date = Experimental_days(2);
     % Experiment 4
     EXPERIMENT = 4;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(2);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04_V1_1ms_60s_ECG_timeline_20260129_110655.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04_V1_1ms_60s_STIM_EVENTS_20260129_110655.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_V1_1ms_60s_ECG_timeline_20260129_110655.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_V1_1ms_60s_STIM_EVENTS_20260129_110655.csv");
     
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
@@ -158,8 +158,8 @@ PEV04.DAY(DAY).Date = Experimental_days(2);
     % Experiment 5
     EXPERIMENT = 5;
     PEV04.DAY(DAY).Experiment(EXPERIMENT).type = Experimental_types(3);
-    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04_C1_bien_ECG_timeline_20260129_111436.csv");
-    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04_C1_bien_STIM_EVENTS_20260129_111436.csv");
+    datos_bio = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_C1_bien_ECG_timeline_20260129_111436.csv");
+    datos_STIM = readtable("..\Verificacion_stim_sense\D2\PEV04\PEV04_C1_bien_STIM_EVENTS_20260129_111436.csv");
     
     [PEV04.DAY(DAY).Experiment(EXPERIMENT).CH1, ...
         PEV04.DAY(DAY).Experiment(EXPERIMENT).CH2, ...
